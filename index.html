@@ -683,6 +683,17 @@
   .distance-badge{white-space:normal !important;text-align:right;}
   .distance-badge .ui-icon{flex-shrink:0;}
 
+  .short-label{display:none;}
+
+  /* ---------- 語言切換 ---------- */
+  .lang-switch{
+    min-height:40px;min-width:48px;padding:0 14px;border-radius:10rem;flex-shrink:0;
+    border:1px solid var(--skapa-border-strong);background:#fff;color:var(--skapa-text);
+    font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;
+  }
+  .lang-switch:hover{background:var(--skapa-neutral);}
+  .tabs + .lang-switch{margin-left:8px;}
+
   /* ---------- 路線資訊卡 ---------- */
   .route-panel{
     position:absolute;top:16px;left:72px;width:340px;max-height:calc(100% - 32px);overflow:auto;
@@ -702,6 +713,7 @@
   .rt-time{font-size:24px;font-weight:700;}
   .rt-dist{font-size:14px;color:var(--skapa-text-2);}
   .rt-msg{margin-top:16px;color:var(--skapa-text-2);}
+  .rt-note{margin-top:4px;font-size:12px;color:var(--skapa-text-3);}
   .rt-actions{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
   .rt-chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px;}
   .rt-chip{
@@ -808,6 +820,10 @@
     aside{border-left:none;padding-top:10px;}
     .aside-sticky-header{border-bottom:none;margin-top:0;top:-10px;padding-top:8px;}
     .tab{min-height:32px;}
+    .lang-switch{min-height:32px;min-width:40px;padding:0 10px;font-size:12px;}
+    .long-label{display:none;}
+    .short-label{display:inline;}
+    .tabs + .lang-switch{margin-left:4px;}
     .toggle-aside-btn{min-height:44px;bottom:calc(18px + env(safe-area-inset-bottom));}
 
     /* 左下角定位／縮放按鈕：與右下角「門市列表」按鈕底部對齊，並避開 iPhone 底部手勢列 */
@@ -837,13 +853,14 @@
 <header>
   <img class="logo" src="https://upload.wikimedia.org/wikipedia/commons/c/c5/Ikea_logo.svg" alt="IKEA">
   <div>
-    <h1>台灣・香港・澳門 門市及提貨點地圖</h1>
-    <div class="sub">互動式門市及提貨據點查詢 ｜ 底圖採用 Google Maps</div>
+    <h1><span class="long-label" data-i18n="h1">台灣・香港・澳門 門市及提貨點地圖</span><span class="short-label" data-i18n="h1Short">門市地圖</span></h1>
+    <div class="sub" data-i18n="sub">互動式門市及提貨據點查詢 ｜ 底圖採用 Google Maps</div>
   </div>
   <div class="tabs">
-    <button class="tab" data-region="tw">台灣</button>
-    <button class="tab active" data-region="hk">香港・澳門</button>
+    <button class="tab" data-region="tw" data-i18n="tabTw">台灣</button>
+    <button class="tab active" data-region="hk"><span class="long-label" data-i18n="tabHk">香港・澳門</span><span class="short-label" data-i18n="tabHkShort">香港・澳門</span></button>
   </div>
+  <button class="lang-switch" onclick="setLang(IS_EN ? 'zh' : 'en')" data-i18n="langSwitch" data-i18n-title="langSwitchTitle">EN</button>
 </header>
 
 <div class="wrap">
@@ -851,11 +868,11 @@
   <div id="mapPickBanner" class="map-pick-banner">
     <span style="display:inline-flex;align-items:center;gap:6px;">
       <svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-      請在地圖上點擊您的真實位置
+      <span data-i18n="pickBanner">請在地圖上點擊您的真實位置</span>
     </span>
     <button onclick="exitMapPickMode()" style="display:inline-flex;align-items:center;gap:4px;">
       <svg class="ui-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-      取消
+      <span data-i18n="cancel">取消</span>
     </button>
   </div>
   <button id="toggleAsideBtn" class="toggle-aside-btn" title="收合右側門市列表" onclick="toggleAside()">
@@ -871,8 +888,8 @@
         <span class="search-icon">
           <svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </span>
-        <input id="q" type="text" placeholder="搜尋門市名稱、提貨站或地址…">
-        <button id="clearSearchBtn" class="clear-search-btn" title="清除搜尋" onclick="clearSearch()" style="display:none;">
+        <input id="q" type="text" placeholder="搜尋門市名稱、提貨站或地址…" data-i18n-placeholder="searchPh">
+        <button id="clearSearchBtn" class="clear-search-btn" title="清除搜尋" data-i18n-title="clearSearch" onclick="clearSearch()" style="display:none;">
           <svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
@@ -887,16 +904,169 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const CATS = {
-  store      : {label:"分店",                         color:"#0058A3"},
-  city       : {label:"訂購取貨中心",                 color:"#F26A1B"},
-  cs         : {label:"社區服務據點（規劃及訂購點）",   color:"#F26A1B"},
-  popup      : {label:"快閃店",                       color:"#E75294"},
-  popuphk    : {label:"期間限定店（Popup Store）",       color:"#E75294"},
-  marketplace: {label:"Market Place 提貨站",          color:"#008C46"},
-  "3hreesixty":{label:"3hreesixty 提貨站",            color:"#7B1FA2"},
-  wellcome   : {label:"惠康提貨站",                    color:"#D9232A"},
+/* ---------- 語言（中文／English） ----------
+   判斷順序：網址 ?lang= → 使用者上次手動選擇 → 瀏覽器語言（中文系顯示中文，其餘顯示英文） */
+function detectLang() {
+  const param = new URLSearchParams(location.search).get("lang");
+  if (param === "zh" || param === "en") return param;
+  try {
+    const saved = localStorage.getItem("ikea_lang");
+    if (saved === "zh" || saved === "en") return saved;
+  } catch (e) {}
+  const primary = (navigator.languages && navigator.languages[0]) || navigator.language || "";
+  return /^zh/i.test(primary) ? "zh" : "en";
+}
+const LANG = detectLang();
+const IS_EN = LANG === "en";
+const MAP_HL = IS_EN ? "en" : "zh-TW";            // Google 底圖標示語言
+const ROUTES_LANG = IS_EN ? "en" : "zh-TW";       // Google 路線資料（站名、路線名）語言
+// 英文句中交通方式用小寫（Planning drive route…），中文維持原樣
+const modeWord = label => IS_EN ? label.toLowerCase() : label;
+
+function applyStaticI18n() {
+  document.documentElement.lang = IS_EN ? "en" : "zh-Hant";
+  document.title = t("title");
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+  document.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = t(el.dataset.i18nTitle); });
+}
+
+function setLang(lang) {
+  try { localStorage.setItem("ikea_lang", lang); } catch (e) {}
+  const url = new URL(location.href);
+  url.searchParams.set("lang", lang);
+  location.href = url.toString();
+}
+
+const I18N = {
+  zh: {
+    title: "IKEA 台灣・香港・澳門 門市地圖",
+    h1: "台灣・香港・澳門 門市及提貨點地圖", h1Short: "台灣・香港・澳門 門市及提貨點地圖", tabHkShort: "香港・澳門",
+    sub: "互動式門市及提貨據點查詢 ｜ 底圖採用 Google Maps",
+    tabTw: "台灣", tabHk: "香港・澳門",
+    langSwitch: "EN", langSwitchTitle: "Switch to English",
+    pickBanner: "請在地圖上點擊您的真實位置", cancel: "取消",
+    hideList: "收合面板", hideListTitle: "收合右側門市列表",
+    showList: "展開清單", showListTitle: "展開右側門市列表",
+    storeList: "門市列表", storeListTitle: "顯示門市列表與篩選",
+    close: "關閉", closeListTitle: "關閉門市列表",
+    searchPh: "搜尋門市名稱、提貨站或地址…", clearSearch: "清除搜尋",
+    layerRoad: "Google 街道地圖", layerHybrid: "Google 衛星混合", layerTerrain: "Google 地形圖",
+    locateBtn: "我的定位", locateTitle: "我的定位（儲存後不再重複彈窗確認）",
+    pickBtn: "點圖定位", pickTitle: "在地圖上直接點擊自訂我的真實位置",
+    userDotTitle: "我的位置（可隨時拖曳微調，點擊展開選單）",
+    myLocation: "我的位置",
+    srcManual: "手動釘選", srcManualD: "你在地圖上指定的位置",
+    srcGps: "自動定位（GPS／WiFi）", srcGpsD: "誤差約 {d}", srcGpsD2: "由瀏覽器提供的位置",
+    srcIp: "自動定位（網路 IP 估算）", srcIpD: "誤差可能達數公里",
+    srcDrag: "手動調整", srcDragD: "你拖曳藍點調整過的位置",
+    ipWarn: "使用公司網路或 VPN 時，IP 估算常會偏離實際位置。位置不對的話，請改用「在地圖上指定」。",
+    nearestLoc: "離你最近的據點", navigate: "導航",
+    reAuto: "重新自動定位", toAuto: "改用自動定位", setOnMap: "在地圖上指定",
+    dragHint: "可直接拖曳藍點微調", clearLoc: "清除我的位置", autoLocate: "自動定位",
+    locFail: "瀏覽器無法取得自動定位（本機 file:// 模式受瀏覽器安全限制，且網路 IP 定位暫時不可用）。\n建議：您可以直接點選右側門市清單查看各據點！",
+    modeStraight: "直線", modeDrive: "開車", modeTransit: "大眾運輸", modeWalk: "步行",
+    min: "{m} 分鐘", hourMin: "{h} 小時 {r} 分", hour: "{h} 小時",
+    straightDist: "直線 {d}", tooFarWalk: "（不建議步行）",
+    calculating: "{mode}計算中…", noRouteShort: "查無{mode}路線・{s}",
+    distanceModeAria: "距離計算方式",
+    travelUnavail: "暫時無法取得交通時間，先顯示直線距離。",
+    travelHint: "顯示離你最近 {n} 間的{mode}時間（Google 地圖資料），其餘為直線距離。",
+    transitGeneric: "大眾運輸", walkChipMin: "{m} 分", walkWord: "步行", stops: "・{n} 站",
+    needLoc: "要規劃路線，請先設定你的位置。",
+    planning: "正在規劃{mode}路線…",
+    routeErr: "暫時無法取得路線，請稍後再試，或直接用 Google 地圖導航。",
+    noRoute: "查無{mode}路線，請改用其他交通方式。",
+    noTraffic: "未計入即時路況，尖峰時段實際時間可能較長。",
+    routeTo: "路線前往", closeRoute: "關閉路線", travelModeAria: "交通方式", openGmapsNav: "用 Google 地圖導航",
+    route: "路線", view: "查看", gmaps: "Google 地圖",
+    all: "全部", nearestSort: "離我最近",
+    nearestSortTitle: "點擊切換：依據與我的位置由近到遠排序",
+    nearestSortNoLoc: "尚未設定我的位置，點擊即可在地圖上指定或自動偵測！",
+    setLocFirst: "請先設定您的位置！\n您可點擊左下角「點圖定位」直接在地圖上指定，或點擊「自動定位」！",
+    lockerTag: "自助提貨櫃", lockerInfo: "自助提貨櫃：{x}", lockerTitle: "設有 IKEA 自助提貨櫃：{x}",
+    allLocations: "全部據點", countSummary: "{cat}：共 <b>{n}</b> 處", sortedBadge: "已依距離由近到遠排序",
+    noResult: "未找到符合「{q}」的門市或提貨站",
+    catSep: "・",
+  },
+  en: {
+    title: "IKEA Store Map: Taiwan, Hong Kong & Macau",
+    h1: "IKEA Stores & Pick-up Points", h1Short: "Store Map", tabHkShort: "HK & Macau",
+    sub: "Taiwan, Hong Kong & Macau ｜ Map data © Google Maps",
+    tabTw: "Taiwan", tabHk: "Hong Kong & Macau",
+    langSwitch: "中文", langSwitchTitle: "切換為中文",
+    pickBanner: "Tap the map to set your location", cancel: "Cancel",
+    hideList: "Hide list", hideListTitle: "Hide the store list",
+    showList: "Show list", showListTitle: "Show the store list",
+    storeList: "Stores", storeListTitle: "Show stores and filters",
+    close: "Close", closeListTitle: "Close the store list",
+    searchPh: "Search stores, pick-up points or addresses…", clearSearch: "Clear search",
+    layerRoad: "Google Streets", layerHybrid: "Google Satellite", layerTerrain: "Google Terrain",
+    locateBtn: "Locate me", locateTitle: "Locate me",
+    pickBtn: "Set on map", pickTitle: "Tap the map to set your location",
+    userDotTitle: "My location (drag to adjust, tap for options)",
+    myLocation: "My location",
+    srcManual: "Pinned manually", srcManualD: "Set by you on the map",
+    srcGps: "Auto-located (GPS / Wi-Fi)", srcGpsD: "Accurate to about {d}", srcGpsD2: "Provided by your browser",
+    srcIp: "Auto-located (IP estimate)", srcIpD: "May be off by several km",
+    srcDrag: "Adjusted manually", srcDragD: "Adjusted by dragging the blue dot",
+    ipWarn: "On company networks or VPNs, IP-based estimates are often inaccurate. If this looks wrong, use \"Set on map\".",
+    nearestLoc: "Nearest location", navigate: "Directions",
+    reAuto: "Locate me again", toAuto: "Use auto-location", setOnMap: "Set on map",
+    dragHint: "Drag the blue dot to adjust", clearLoc: "Clear my location", autoLocate: "Locate me",
+    locFail: "We couldn't get your location automatically.\nYou can set it on the map instead, or browse the store list.",
+    modeStraight: "Distance", modeDrive: "Drive", modeTransit: "Transit", modeWalk: "Walk",
+    min: "{m} min", hourMin: "{h} h {r} min", hour: "{h} h",
+    straightDist: "{d} away", tooFarWalk: " (too far to walk)",
+    calculating: "Calculating {mode}…", noRouteShort: "No {mode} route · {s}",
+    distanceModeAria: "Distance mode",
+    travelUnavail: "Travel times are unavailable right now, so straight-line distances are shown.",
+    travelHint: "Showing {mode} times for the {n} nearest locations (Google Maps data). Others show straight-line distance.",
+    transitGeneric: "Transit", walkChipMin: "{m} min", walkWord: "Walk", stops: " · {n} stops",
+    needLoc: "Set your location first to plan a route.",
+    planning: "Planning {mode} route…",
+    routeErr: "We couldn't get a route right now. Try again later, or open directions in Google Maps.",
+    noRoute: "No {mode} route found. Try another travel mode.",
+    noTraffic: "Doesn't include live traffic, so it may take longer at peak times.",
+    routeTo: "Route to", closeRoute: "Close route", travelModeAria: "Travel mode", openGmapsNav: "Open in Google Maps",
+    route: "Route", view: "View", gmaps: "Google Maps",
+    all: "All", nearestSort: "Nearest",
+    nearestSortTitle: "Sort by distance from your location",
+    nearestSortNoLoc: "Set your location to sort by distance",
+    setLocFirst: "Set your location first.\nUse \"Set on map\" at the bottom left, or \"Locate me\".",
+    lockerTag: "Pick-up locker", lockerInfo: "Pick-up locker: {x}", lockerTitle: "IKEA pick-up locker: {x}",
+    allLocations: "All locations", countSummary: "{cat}: <b>{n}</b>", sortedBadge: "Sorted by distance",
+    noResult: "No stores or pick-up points match \"{q}\"",
+    catSep: " · ",
+  },
 };
+
+function t(key, vars) {
+  let s = (I18N[LANG] && I18N[LANG][key]) ?? I18N.zh[key] ?? key;
+  if (vars) for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(v);
+  return s;
+}
+
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+// 據點欄位依語言取值（英文版的地址／提貨櫃說明來自官網英文頁）
+const sName = s => IS_EN ? s.en : s.zh;
+const sAltName = s => IS_EN ? s.zh : s.en;
+const sAddr = s => IS_EN ? (s.addrEn || s.addr) : s.addr;
+const sLocker = s => IS_EN ? (s.lockerEn || s.locker) : s.locker;
+const sClosed = s => IS_EN ? (s.closedEn || s.closed) : s.closed;
+
+const CATS = {
+  store      : {zh:"分店",                       en:"IKEA Store",               color:"#0058A3"},
+  city       : {zh:"訂購取貨中心",               en:"Planning & Pick-up Point", color:"#F26A1B"},
+  cs         : {zh:"社區服務據點（規劃及訂購點）", en:"Plan and Order Point",     color:"#F26A1B"},
+  popup      : {zh:"快閃店",                     en:"Pop-up Store",             color:"#E75294"},
+  popuphk    : {zh:"期間限定店（Popup Store）",     en:"Popup Store",              color:"#E75294"},
+  marketplace: {zh:"Market Place 提貨站",        en:"Market Place Pick-up",     color:"#008C46"},
+  "3hreesixty":{zh:"3hreesixty 提貨站",          en:"3hreesixty Pick-up",       color:"#7B1FA2"},
+  wellcome   : {zh:"惠康提貨站",                  en:"Wellcome Pick-up",         color:"#D9232A"},
+};
+Object.values(CATS).forEach(c => Object.defineProperty(c, "label", { get() { return IS_EN ? this.en : this.zh; } }));
 
 const ICONS = {
   search: `<svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
@@ -926,17 +1096,17 @@ const DATA = {
     center:[23.75,120.95], zoom:8,
     cats:["store","city","popup"],
     stores:[
-      {n:1, cat:"store", zh:"內湖店", en:"Neihu Store",  addr:"台北市內湖區舊宗路一段128號", lat:25.0609683, lon:121.5780389, cid:"1496312463967873712"},
-      {n:2, cat:"store", zh:"新莊店", en:"Xinzhuang Store", addr:"新北市新莊區中正路1號", lat:25.0413322, lon:121.4649748, cid:"12364751227325972718"},
-      {n:3, cat:"store", zh:"新店店", en:"Xindian Store", addr:"新北市新店區中央路159號4樓", lat:24.9726619, lon:121.5300492, cid:"16095158368651679343"},
-      {n:4, cat:"store", zh:"桃園店", en:"Taoyuan Store", addr:"桃園市中壢區青埔里高鐵站前東路一段1號", lat:25.0133222, lon:121.2171759, cid:"3847807742945177865"},
-      {n:5, cat:"store", zh:"台中店", en:"Taichung Store", addr:"台中市南屯區向上路二段168號", lat:24.1473199, lon:120.6432402, cid:"8265981256988590935"},
-      {n:6, cat:"store", zh:"高雄店", en:"Kaohsiung Store", addr:"高雄市前鎮區中華五路1201號", lat:22.6058468, lon:120.3044565, cid:"2012707749411056164"},
-      {n:7, cat:"store", zh:"台北城市店-小巨蛋", en:"Taipei City Shop Arena", addr:"台北市松山區敦化北路100號B1", lat:25.0523441, lon:121.5484703, cid:"9913186858208929722"},
-      {n:8, cat:"store", zh:"嘉義城市店", en:"Chiayi City Shop", addr:"嘉義市西區博愛路二段281號", lat:23.4781873, lon:120.4380570, cid:"1222016163975114731"},
-      {n:9, cat:"city", zh:"新竹訂購取貨中心", en:"Hsinchu Planning and Pick-up Point", addr:"新竹縣竹北市中正東路98號", lat:24.8352712, lon:121.0173716, cid:"1666151064483011416"},
-      {n:10, cat:"popup", zh:"宜蘭快閃店", en:"Yilan Pop-up Store", addr:"宜蘭縣宜蘭市民權路二段38巷6號（新月廣場1樓）", lat:24.7540710, lon:121.7512474, cid:"12672748657440181888"},
-      {n:11, cat:"popup", zh:"天母快閃店", en:"Tianmu Pop-up Store", addr:"台北市士林區德行西路47號2樓（家樂福天母店2F）", lat:25.1055268, lon:121.5228549, cid:"13096964935841407705", closed:"已結束"},
+      {n:1, cat:"store", zh:"內湖店", en:"Neihu Store",  addr:"台北市內湖區舊宗路一段128號", addrEn:"No. 128, Sec. 1, Jiuzong Rd., Neihu Dist., Taipei City", lat:25.0609683, lon:121.5780389, cid:"1496312463967873712"},
+      {n:2, cat:"store", zh:"新莊店", en:"Xinzhuang Store", addr:"新北市新莊區中正路1號", addrEn:"No. 1, Zhongzheng Rd., Xinzhuang Dist., New Taipei City", lat:25.0413322, lon:121.4649748, cid:"12364751227325972718"},
+      {n:3, cat:"store", zh:"新店店", en:"Xindian Store", addr:"新北市新店區中央路159號4樓", addrEn:"4F, No. 159, Zhongyang Rd., Xindian Dist., New Taipei City", lat:24.9726619, lon:121.5300492, cid:"16095158368651679343"},
+      {n:4, cat:"store", zh:"桃園店", en:"Taoyuan Store", addr:"桃園市中壢區青埔里高鐵站前東路一段1號", addrEn:"No. 1, Sec. 1, Gaotiezhanqian E. Rd., Zhongli Dist., Taoyuan City", lat:25.0133222, lon:121.2171759, cid:"3847807742945177865"},
+      {n:5, cat:"store", zh:"台中店", en:"Taichung Store", addr:"台中市南屯區向上路二段168號", addrEn:"No. 168, Sec. 2, Xiangshang Rd., Nantun Dist., Taichung City", lat:24.1473199, lon:120.6432402, cid:"8265981256988590935"},
+      {n:6, cat:"store", zh:"高雄店", en:"Kaohsiung Store", addr:"高雄市前鎮區中華五路1201號", addrEn:"No. 1201, Zhonghua 5th Rd., Qianzhen Dist., Kaohsiung City", lat:22.6058468, lon:120.3044565, cid:"2012707749411056164"},
+      {n:7, cat:"store", zh:"台北城市店-小巨蛋", en:"Taipei City Shop Arena", addr:"台北市松山區敦化北路100號B1", addrEn:"B1, No. 100, Dunhua N. Rd., Songshan Dist., Taipei City", lat:25.0523441, lon:121.5484703, cid:"9913186858208929722"},
+      {n:8, cat:"store", zh:"嘉義城市店", en:"Chiayi City Shop", addr:"嘉義市西區博愛路二段281號", addrEn:"1F, No. 281, Sec. 2, Bo'ai Rd., West Dist., Chiayi City", lat:23.4781873, lon:120.4380570, cid:"1222016163975114731"},
+      {n:9, cat:"city", zh:"新竹訂購取貨中心", en:"Hsinchu Planning and Pick-up Point", addr:"新竹縣竹北市中正東路98號", addrEn:"No. 98, Zhongzheng E. Rd., Zhubei City, Hsinchu County", lat:24.8352712, lon:121.0173716, cid:"1666151064483011416"},
+      {n:10, cat:"popup", zh:"宜蘭快閃店", en:"Yilan Pop-up Store", addr:"宜蘭縣宜蘭市民權路二段38巷6號（新月廣場1樓）", addrEn:"1F, Luna Plaza, No. 6, Ln. 38, Sec. 2, Minquan Rd., Yilan City, Yilan County", lat:24.7540710, lon:121.7512474, cid:"12672748657440181888"},
+      {n:11, cat:"popup", zh:"天母快閃店", en:"Tianmu Pop-up Store", addr:"台北市士林區德行西路47號2樓（家樂福天母店2F）", addrEn:"2F, Carrefour Tianmu, No. 47, Dexing W. Rd., Shilin Dist., Taipei City", lat:25.1055268, lon:121.5228549, cid:"13096964935841407705", closed:"已結束", closedEn:"Ended"},
     ]
   },
   hk: {
@@ -944,53 +1114,53 @@ const DATA = {
     cats:["store","cs","popuphk","marketplace","3hreesixty","wellcome"],
     stores:[
       // 1. 分店 (共 5 處：香港 4 處 + 澳門 1 處)
-      {n:1, cat:"store", zh:"銅鑼灣分店", en:"Causeway Bay Store", addr:"香港銅鑼灣告士打道310號柏寧酒店地庫", lat:22.2807635, lon:114.1863215, cid:"4340842157881024334"},
-      {n:2, cat:"store", zh:"九龍灣分店", en:"Kowloon Bay Store", addr:"九龍灣宏照道38號MegaBox 4樓", lat:22.3196037, lon:114.2085155, cid:"2316816596803810210", locker:"MegaBox 4樓 FiKET咖啡廊旁（24小時）"},
-      {n:3, cat:"store", zh:"沙田分店", en:"Shatin Store", addr:"沙田鄉事會路138號HomeSquare L6", lat:22.3855358, lon:114.1877806, cid:"14717193456579229411"},
-      {n:4, cat:"store", zh:"荃灣分店", en:"Tsuen Wan Store", addr:"荃灣青山公路388號中染大廈8咪半 3樓", lat:22.3753302, lon:114.1130687, cid:"15933576463128277314"},
-      {n:5, cat:"store", zh:"澳門分店", en:"Macau Store", addr:"澳門氹仔廣東大馬路515號星皓廣場1樓101及2樓201號舖", lat:22.1607463, lon:113.5533708, cid:"9111055129926894875"},
+      {n:1, cat:"store", zh:"銅鑼灣分店", en:"Causeway Bay Store", addr:"香港銅鑼灣告士打道310號柏寧酒店地庫", addrEn:"Upper Basement, The Park Lane Hotel, 310 Gloucester Road, Causeway Bay, HK", lat:22.2807635, lon:114.1863215, cid:"4340842157881024334"},
+      {n:2, cat:"store", zh:"九龍灣分店", en:"Kowloon Bay Store", addr:"九龍灣宏照道38號MegaBox 4樓", addrEn:"L4, MegaBox, 38 Wang Chiu Road, Kowloon Bay", lat:22.3196037, lon:114.2085155, cid:"2316816596803810210", locker:"MegaBox 4樓 FiKET咖啡廊旁（24小時）", lockerEn:"L4, MegaBox, next to IKEA FiKET (24 hours)"},
+      {n:3, cat:"store", zh:"沙田分店", en:"Shatin Store", addr:"沙田鄉事會路138號HomeSquare L6", addrEn:"L6, HomeSquare, 138 Sha Tin Rural Committee Road, Sha Tin", lat:22.3855358, lon:114.1877806, cid:"14717193456579229411"},
+      {n:4, cat:"store", zh:"荃灣分店", en:"Tsuen Wan Store", addr:"荃灣青山公路388號中染大廈8咪半 3樓", addrEn:"Level 3, 8A, 388 Castle Peak Road, Tsuen Wan", lat:22.3753302, lon:114.1130687, cid:"15933576463128277314"},
+      {n:5, cat:"store", zh:"澳門分店", en:"Macau Store", addr:"澳門氹仔廣東大馬路515號星皓廣場1樓101及2樓201號舖", addrEn:"Shop 101, 1/F & Shop 201, 2/F, NOVA Mall, No. 515 Avenida de Kwong Tung, Taipa, Macau", lat:22.1607463, lon:113.5533708, cid:"9111055129926894875"},
 
       // 2. 社區服務據點（規劃及訂購點，共 5 處）
-      {n:6, cat:"cs", zh:"尖沙咀規劃及訂購點", en:"Tsim Sha Tsui Plan and Order Point", addr:"尖沙咀河內道18號K11購物藝術館B2層B204-B210舖", lat:22.2972778, lon:114.1733357, cid:"9346504872689832686", locker:"K11購物藝術館B2層 (地鐵站N3出口)（07:30-23:00）"},
-      {n:7, cat:"cs", zh:"太古規劃及訂購點", en:"Tai Koo Plan and Order Point", addr:"鰂魚涌太古城道18號太古城中心一樓104及105店", lat:22.2856337, lon:114.2175951, cid:"8951510564594191777", locker:"太古城中心一樓104及105店（11:00-21:00）"},
-      {n:8, cat:"cs", zh:"坑口規劃及訂購點", en:"Hang Hau Plan and Order Point", addr:"將軍澳重華路8號東港城2樓221號舖", lat:22.3163658, lon:114.2652397, cid:"10378602320833438578", locker:"東港城2樓221號舖（07:00-22:00）"},
-      {n:9, cat:"cs", zh:"大埔規劃及訂購點", en:"Tai Po Plan and Order Point", addr:"新界大埔超級城B區2樓238A號鋪", lat:22.4517464, lon:114.1699792, cid:"18293259922146024361", locker:"大埔超級城B區2樓238A號鋪店旁（11:00-21:00）"},
-      {n:10, cat:"cs", zh:"西灣河規劃及取貨據點", en:"Sai Wan Ho Pick-up Point (已結業)", addr:"西灣河耀興道55號興東商場地下11號舖（附註：實體已於2025年結業，特價部併入九龍灣店）", lat:22.2807200, lon:114.2200660, cid:"16661852414641302578", closed:"已結業"},
+      {n:6, cat:"cs", zh:"尖沙咀規劃及訂購點", en:"Tsim Sha Tsui Plan and Order Point", addr:"尖沙咀河內道18號K11購物藝術館B2層B204-B210舖", addrEn:"B204-B210, B2/F, K11 Art Mall, 18 Hanoi Road, Tsim Sha Tsui", lat:22.2972778, lon:114.1733357, cid:"9346504872689832686", locker:"K11購物藝術館B2層 (地鐵站N3出口)（07:30-23:00）", lockerEn:"B2/F, K11 Art Mall, near TST MTR Exit N3 (07:30-23:00)"},
+      {n:7, cat:"cs", zh:"太古規劃及訂購點", en:"Tai Koo Plan and Order Point", addr:"鰂魚涌太古城道18號太古城中心一樓104及105店", addrEn:"Shop 104-105, 1/F, Cityplaza, 18 Tai Koo Shing Road, Tai Koo, HK", lat:22.2856337, lon:114.2175951, cid:"8951510564594191777", locker:"太古城中心一樓104及105店（11:00-21:00）", lockerEn:"Shop 104 & 105, 1/F, Cityplaza (11:00-21:00)"},
+      {n:8, cat:"cs", zh:"坑口規劃及訂購點", en:"Hang Hau Plan and Order Point", addr:"將軍澳重華路8號東港城2樓221號舖", addrEn:"Shop 221, L2, East Point City, 8 Chung Wa Road, Tseung Kwan O", lat:22.3163658, lon:114.2652397, cid:"10378602320833438578", locker:"東港城2樓221號舖（07:00-22:00）", lockerEn:"Shop 221, L2, East Point City (07:00-22:00)"},
+      {n:9, cat:"cs", zh:"大埔規劃及訂購點", en:"Tai Po Plan and Order Point", addr:"新界大埔超級城B區2樓238A號鋪", addrEn:"Shop 238a, Level 2, Zone B, Tai Po Mega Mall, Tai Po, NT", lat:22.4517464, lon:114.1699792, cid:"18293259922146024361", locker:"大埔超級城B區2樓238A號鋪店旁（11:00-21:00）", lockerEn:"Shop 238a, 2/F Zone B, Tai Po Mega Mall (11:00-21:00)"},
+      {n:10, cat:"cs", zh:"西灣河規劃及取貨據點", en:"Sai Wan Ho Pick-up Point", addr:"西灣河耀興道55號興東商場地下11號舖（附註：實體已於2025年結業，特價部併入九龍灣店）", addrEn:"Shop 11, G/F, Hing Tung Shopping Centre, 55 Yiu Hing Road, Sai Wan Ho, HK", lat:22.2807200, lon:114.2200660, cid:"16661852414641302578", closed:"已結業", closedEn:"Closed"},
 
       // 3. 期間限定店（Popup Store，共 8 處）
-      {n:11, cat:"popuphk", zh:"黃竹坑期間限定店", en:"Wong Chuk Hang Popup", addr:"黃竹坑香葉道11號THE SOUTHSIDE L1樓P1-B舖", lat:22.2473891, lon:114.1675297, cid:"5090367853110290929"},
-      {n:12, cat:"popuphk", zh:"馬鞍山期間限定店", en:"Ma On Shan Popup", addr:"馬鞍山鞍祿街18號新港城中心MOSTown", lat:22.4225776, lon:114.2320374, cid:"11771906069941588579"},
-      {n:13, cat:"popuphk", zh:"上水期間限定店", en:"Sheung Shui Popup", addr:"上水智昌路3號上水中心", lat:22.5008858, lon:114.1299577, cid:"11497979899263799895"},
-      {n:14, cat:"popuphk", zh:"如心廣場期間限定店", en:"Nina Popup", addr:"荃灣楊屋道8號如心廣場一期", lat:22.3687480, lon:114.1129900, cid:"4043452325659487410"},
-      {n:15, cat:"popuphk", zh:"青衣期間限定店", en:"Tsing Yi Popup", addr:"青衣青敬路31-33號青衣城1期", lat:22.3600644, lon:114.1069973, cid:"12052529587826777379"},
-      {n:16, cat:"popuphk", zh:"屯門市廣場期間限定店", en:"Tuen Mun Town Popup", addr:"屯門屯順街1號屯門市廣場2期3樓2328號舖Kiosk", lat:22.3930370, lon:113.9777275, cid:"1394087244577275813"},
-      {n:17, cat:"popuphk", zh:"啟德期間限定店", en:"Kai Tak AIRSIDE Popup", addr:"啟德協調道2號AIRSIDE 1樓109及113號舖", lat:22.3313220, lon:114.1981420, cid:"1062125434480119345"},
-      {n:18, cat:"popuphk", zh:"天水圍期間限定店", en:"Tin Shui Wai Popup", addr:"新界天水圍天恩路18號 +WOO 嘉湖二期 G/F 中庭", lat:22.4570560, lon:114.0039170},
+      {n:11, cat:"popuphk", zh:"黃竹坑期間限定店", en:"Wong Chuk Hang Popup", addr:"黃竹坑香葉道11號THE SOUTHSIDE L1樓P1-B舖", addrEn:"Shop P1-B, L1, THE SOUTHSIDE, 11 Heung Yip Road, Wong Chuk Hang, HK", lat:22.2473891, lon:114.1675297, cid:"5090367853110290929"},
+      {n:12, cat:"popuphk", zh:"馬鞍山期間限定店", en:"Ma On Shan Popup", addr:"馬鞍山鞍祿街18號新港城中心MOSTown", addrEn:"MOSTown, 18 On Luk Street, Ma On Shan, NT", lat:22.4225776, lon:114.2320374, cid:"11771906069941588579"},
+      {n:13, cat:"popuphk", zh:"上水期間限定店", en:"Sheung Shui Popup", addr:"上水智昌路3號上水中心", addrEn:"Sheung Shui Centre, 3 Chi Cheong Road, Sheung Shui, NT", lat:22.5008858, lon:114.1299577, cid:"11497979899263799895"},
+      {n:14, cat:"popuphk", zh:"如心廣場期間限定店", en:"Nina Popup", addr:"荃灣楊屋道8號如心廣場一期", addrEn:"Nina Mall 1, 8 Yeung Uk Road, Tsuen Wan, NT", lat:22.3687480, lon:114.1129900, cid:"4043452325659487410"},
+      {n:15, cat:"popuphk", zh:"青衣期間限定店", en:"Tsing Yi Popup", addr:"青衣青敬路31-33號青衣城1期", addrEn:"Maritime Square Phase 1, 31-33 Tsing King Road, Tsing Yi", lat:22.3600644, lon:114.1069973, cid:"12052529587826777379"},
+      {n:16, cat:"popuphk", zh:"屯門市廣場期間限定店", en:"Tuen Mun Town Popup", addr:"屯門屯順街1號屯門市廣場2期3樓2328號舖Kiosk", addrEn:"Kiosk, Shop 2328, 3/F, Tmtplaza Phase 2, 1 Tuen Shun Street, Tuen Mun", lat:22.3930370, lon:113.9777275, cid:"1394087244577275813"},
+      {n:17, cat:"popuphk", zh:"啟德期間限定店", en:"Kai Tak AIRSIDE Popup", addr:"啟德協調道2號AIRSIDE 1樓109及113號舖", addrEn:"Shop 109 & 113, 1/F, AIRSIDE, 2 Concorde Road, Kai Tak", lat:22.3313220, lon:114.1981420, cid:"1062125434480119345"},
+      {n:18, cat:"popuphk", zh:"天水圍期間限定店", en:"Tin Shui Wai Popup", addr:"新界天水圍天恩路18號 +WOO 嘉湖二期 G/F 中庭", addrEn:"G/F Atrium, +WOO Phase 2, 18 Tin Yan Road, Tin Shui Wai, NT", lat:22.4570560, lon:114.0039170},
 
       // 4. Market Place 提貨站 (共 6 處)
-      {n:19, cat:"marketplace", zh:"中環盈置大廈提貨站", en:"Central Nexxus Building Pick-up", addr:"香港中環德輔道中77號盈置大廈地庫全層 (Market Place)", lat:22.2842116, lon:114.1564597},
-      {n:20, cat:"marketplace", zh:"渣甸山白建時道提貨站", en:"Jardine's Lookout Pick-up", addr:"香港渣甸山白建時道5號1樓 (Market Place)", lat:22.2706328, lon:114.1916743},
-      {n:21, cat:"marketplace", zh:"奧海城2期提貨站", en:"Olympian City 2 Pick-up (Close to you)", addr:"九龍大角咀西九龍海庭道18號奧海城2期地下G1及G10號鋪 (Market Place / Close to you)", lat:22.3182000, lon:114.1595000, cid:"11773809708404478753", locker:"奧海城2期地下G1及G10號鋪 Market Place 內（08:00-22:30）"},
-      {n:22, cat:"marketplace", zh:"將軍澳中心提貨站", en:"Park Central Pick-up", addr:"將軍澳唐德街9號將軍澳中心地庫1樓B10A號鋪 (Market Place)", lat:22.3070018, lon:114.2571932},
-      {n:23, cat:"marketplace", zh:"大圍圍方提貨站", en:"The Wai Pick-up", addr:"新界沙田車公廟路18號圍方商場4樓413-415號舖 (Market Place)", lat:22.3732991, lon:114.1801102},
-      {n:24, cat:"marketplace", zh:"愉景灣提貨站", en:"Discovery Bay Pick-up (Close to you)", addr:"大嶼山愉景灣海澄湖畔路92號愉景北商場地下G11號舖 (Market Place / Close to you)", lat:22.3076200, lon:114.0168700, cid:"14336745112252413194", locker:"愉景北商場地下G11號舖 Market Place 內（11:00-20:00）"},
+      {n:19, cat:"marketplace", zh:"中環盈置大廈提貨站", en:"Central Nexxus Building Pick-up", addr:"香港中環德輔道中77號盈置大廈地庫全層 (Market Place)", addrEn:"LG/F, Nexxus Building, 77 Des Voeux Road Central, Central, HK (Market Place)", lat:22.2842116, lon:114.1564597},
+      {n:20, cat:"marketplace", zh:"渣甸山白建時道提貨站", en:"Jardine's Lookout Pick-up", addr:"香港渣甸山白建時道5號1樓 (Market Place)", addrEn:"1/F, 5 Perkins Road, Jardine's Lookout, HK (Market Place)", lat:22.2706328, lon:114.1916743},
+      {n:21, cat:"marketplace", zh:"奧海城2期提貨站", en:"Olympian City 2 Pick-up (Close to you)", addr:"九龍大角咀西九龍海庭道18號奧海城2期地下G1及G10號鋪 (Market Place / Close to you)", addrEn:"Shop G1 & G10, G/F, Olympian City 2, 18 Hoi Ting Road, West Kowloon (Market Place / Close to you)", lat:22.3182000, lon:114.1595000, cid:"11773809708404478753", locker:"奧海城2期地下G1及G10號鋪 Market Place 內（08:00-22:30）", lockerEn:"Inside Market Place, Olympian City 2 (08:00-22:30)"},
+      {n:22, cat:"marketplace", zh:"將軍澳中心提貨站", en:"Park Central Pick-up", addr:"將軍澳唐德街9號將軍澳中心地庫1樓B10A號鋪 (Market Place)", addrEn:"Shop B10A, B1/F, Park Central, 9 Tong Tak Street, Tseung Kwan O (Market Place)", lat:22.3070018, lon:114.2571932},
+      {n:23, cat:"marketplace", zh:"大圍圍方提貨站", en:"The Wai Pick-up", addr:"新界沙田車公廟路18號圍方商場4樓413-415號舖 (Market Place)", addrEn:"Shop 413-415, 4/F, The Wai, 18 Che Kung Miu Road, Sha Tin, NT (Market Place)", lat:22.3732991, lon:114.1801102},
+      {n:24, cat:"marketplace", zh:"愉景灣提貨站", en:"Discovery Bay Pick-up (Close to you)", addr:"大嶼山愉景灣海澄湖畔路92號愉景北商場地下G11號舖 (Market Place / Close to you)", addrEn:"Shop G11, G/F, Discovery Bay North Plaza, 92 Siena Avenue, Lantau Island (Market Place / Close to you)", lat:22.3076200, lon:114.0168700, cid:"14336745112252413194", locker:"愉景北商場地下G11號舖 Market Place 內（11:00-20:00）", lockerEn:"Inside Market Place, Discovery Bay North Plaza (11:00-20:00)"},
 
       // 5. 3hreesixty 提貨站 (共 1 處)
-      {n:25, cat:"3hreesixty", zh:"赤柱廣場提貨站", en:"Stanley Plaza Pick-up (3hreesixty)", addr:"香港赤柱佳美道23及33號馬坑邨赤柱廣場2樓203號鋪 (3hreesixty)", lat:22.2192500, lon:114.2098500},
+      {n:25, cat:"3hreesixty", zh:"赤柱廣場提貨站", en:"Stanley Plaza Pick-up (3hreesixty)", addr:"香港赤柱佳美道23及33號馬坑邨赤柱廣場2樓203號鋪 (3hreesixty)", addrEn:"Shop 203, 2/F, Stanley Plaza, Ma Hang Estate, 23 & 33 Carmel Road, Stanley (3hreesixty)", lat:22.2192500, lon:114.2098500},
 
       // 6. 惠康提貨站 (共 12 處)
-      {n:26, cat:"wellcome", zh:"西環寶翠園提貨站", en:"The Westwood Pick-up", addr:"香港卑路乍街8號西寶城3樓 (惠康超級市場)", lat:22.2857460, lon:114.1331869},
-      {n:27, cat:"wellcome", zh:"北角健威花園提貨站", en:"Fitfort Pick-up", addr:"香港北角英皇道560號健威商場高層U14室 (惠康超級市場)", lat:22.2915435, lon:114.2038527},
-      {n:28, cat:"wellcome", zh:"美孚新邨2提貨站", en:"Mei Foo Sun Chuen Pick-up", addr:"九龍美孚新邨百老匯街69-71號地下 (惠康超級市場)", lat:22.3357979, lon:114.1399613},
-      {n:29, cat:"wellcome", zh:"紅磡提貨站", en:"Hung Hom Pick-up", addr:"九龍紅磡湖光街1-7號聯盛大廈地下10C-10G (惠康超級市場)", lat:22.3059896, lon:114.1863443},
-      {n:30, cat:"wellcome", zh:"鯉魚門提貨站", en:"Lei Yue Mun Pick-up", addr:"九龍油塘鯉魚門道鯉魚門廣場1樓123及124舖 (惠康超級市場)", lat:22.2963310, lon:114.2394676},
-      {n:31, cat:"wellcome", zh:"上水名都提貨站", en:"Sheung Shui Town Centre Pick-up", addr:"新界上水名都中心第一層3, 15至16, 18, 20至21號舖 (惠康超級市場)", lat:22.5022290, lon:114.1284227},
-      {n:32, cat:"wellcome", zh:"屯門安定提貨站", en:"On Ting Estate Pick-up", addr:"新界屯門鄉事會路2A安定邨酒樓大厦3樓M301（愛定商場） (惠康超級市場)", lat:22.3872107, lon:113.9769265},
-      {n:33, cat:"wellcome", zh:"元朗朗屏提貨站", en:"Long Ping Pick-up", addr:"新界元朗朗屏邨商場2樓203舖 (惠康超級市場)", lat:22.4503749, lon:114.0237228},
-      {n:34, cat:"wellcome", zh:"天水圍天澤提貨站", en:"Tin Chak Pick-up", addr:"新界天水圍天澤商場2樓204號舖 (惠康超級市場)", lat:22.4684555, lon:113.9987441},
-      {n:35, cat:"wellcome", zh:"馬鞍山恒安提貨站", en:"Hang On Pick-up", addr:"新界馬鞍山恒安村恆安商場2號227-231舖 (惠康超級市場)", lat:22.4164240, lon:114.2285657},
-      {n:36, cat:"wellcome", zh:"東涌逸東提貨站", en:"Yat Tung Pick-up", addr:"大嶼山東涌逸東商場1樓110舖 (惠康超級市場)", lat:22.2821962, lon:113.9362642},
-      {n:37, cat:"wellcome", zh:"梅窩銀礦灣提貨站", en:"Silvermine Bay Pick-up", addr:"大嶼山梅窩銀灣道2號家樂閣地下 (惠康超級市場)", lat:22.2640279, lon:114.0011965},
+      {n:26, cat:"wellcome", zh:"西環寶翠園提貨站", en:"The Westwood Pick-up", addr:"香港卑路乍街8號西寶城3樓 (惠康超級市場)", addrEn:"3/F, The Westwood, 8 Belcher's Street, HK (Wellcome)", lat:22.2857460, lon:114.1331869},
+      {n:27, cat:"wellcome", zh:"北角健威花園提貨站", en:"Fitfort Pick-up", addr:"香港北角英皇道560號健威商場高層U14室 (惠康超級市場)", addrEn:"Shop 14 (Portion), UG/F, Fitfort, 560 King's Road, North Point, HK (Wellcome)", lat:22.2915435, lon:114.2038527},
+      {n:28, cat:"wellcome", zh:"美孚新邨2提貨站", en:"Mei Foo Sun Chuen Pick-up", addr:"九龍美孚新邨百老匯街69-71號地下 (惠康超級市場)", addrEn:"G/F, 69-71 Broadway Street, Mei Foo Sun Chuen, Kowloon (Wellcome)", lat:22.3357979, lon:114.1399613},
+      {n:29, cat:"wellcome", zh:"紅磡提貨站", en:"Hung Hom Pick-up", addr:"九龍紅磡湖光街1-7號聯盛大廈地下10C-10G (惠康超級市場)", addrEn:"Shop 10C-10G, G/F, United Building, 1-7 Wu Kwong Street, Hung Hom, Kowloon (Wellcome)", lat:22.3059896, lon:114.1863443},
+      {n:30, cat:"wellcome", zh:"鯉魚門提貨站", en:"Lei Yue Mun Pick-up", addr:"九龍油塘鯉魚門道鯉魚門廣場1樓123及124舖 (惠康超級市場)", addrEn:"Shop 123-124, Level 1, Lei Yue Mun Plaza, Lei Yue Mun Estate, Yau Tong, Kowloon (Wellcome)", lat:22.2963310, lon:114.2394676},
+      {n:31, cat:"wellcome", zh:"上水名都提貨站", en:"Sheung Shui Town Centre Pick-up", addr:"新界上水名都中心第一層3, 15至16, 18, 20至21號舖 (惠康超級市場)", addrEn:"Shops 3, 15-16, 18, 20-21, Level 1, Sheung Shui Town Centre, Sheung Shui, NT (Wellcome)", lat:22.5022290, lon:114.1284227},
+      {n:32, cat:"wellcome", zh:"屯門安定提貨站", en:"On Ting Estate Pick-up", addr:"新界屯門鄉事會路2A安定邨酒樓大厦3樓M301（愛定商場） (惠康超級市場)", addrEn:"Shop N-321, 3/F, Restaurant Block, On Ting Estate, 2A Tuen Mun Heung Sze Wui Road, Tuen Mun, NT (Wellcome)", lat:22.3872107, lon:113.9769265},
+      {n:33, cat:"wellcome", zh:"元朗朗屏提貨站", en:"Long Ping Pick-up", addr:"新界元朗朗屏邨商場2樓203舖 (惠康超級市場)", addrEn:"Shop L203, 2/F, Long Ping Shopping Centre, Long Ping Estate, Yuen Long, NT (Wellcome)", lat:22.4503749, lon:114.0237228},
+      {n:34, cat:"wellcome", zh:"天水圍天澤提貨站", en:"Tin Chak Pick-up", addr:"新界天水圍天澤商場2樓204號舖 (惠康超級市場)", addrEn:"Shop 204, 2/F, Tin Chak Shopping Centre, Tin Shui Wai, NT (Wellcome)", lat:22.4684555, lon:113.9987441},
+      {n:35, cat:"wellcome", zh:"馬鞍山恒安提貨站", en:"Hang On Pick-up", addr:"新界馬鞍山恒安村恆安商場2號227-231舖 (惠康超級市場)", addrEn:"Shop 227-231, Level 2, Heng On Shopping Centre, Heng On Estate, Ma On Shan, NT (Wellcome)", lat:22.4164240, lon:114.2285657},
+      {n:36, cat:"wellcome", zh:"東涌逸東提貨站", en:"Yat Tung Pick-up", addr:"大嶼山東涌逸東商場1樓110舖 (惠康超級市場)", addrEn:"Shop 110, 1/F, Yat Tung Shopping Centre, Yat Tung Estate, Tung Chung, Lantau Island (Wellcome)", lat:22.2821962, lon:113.9362642},
+      {n:37, cat:"wellcome", zh:"梅窩銀礦灣提貨站", en:"Silvermine Bay Pick-up", addr:"大嶼山梅窩銀灣道2號家樂閣地下 (惠康超級市場)", addrEn:"G/F, Gallop Court, 2 Ngan Wan Road, Mui Wo, Lantau Island (Wellcome)", lat:22.2640279, lon:114.0011965},
     ]
   }
 };
@@ -1005,25 +1175,25 @@ L.control.zoom({position:"bottomleft"}).addTo(map);
 
 // 直接採用 Google Maps 圖層，徹底解決 OpenStreetMap 403 Access Blocked 問題
 // 設定 maxNativeZoom: 解決放大地圖後圖層消失或變灰白的問題（當放大超過原生層級時，Leaflet 自動進行平滑插值放大，保證地圖永不消失）
-const googleRoads = L.tileLayer("https://mt{s}.google.com/vt/lyrs=m&hl=zh-TW&x={x}&y={y}&z={z}", {
+const googleRoads = L.tileLayer(`https://mt{s}.google.com/vt/lyrs=m&hl=${MAP_HL}&x={x}&y={y}&z={z}`, {
   subdomains: ['0','1','2','3'],
   maxZoom: 21,
   maxNativeZoom: 19,
   attribution: '&copy; <a href="https://maps.google.com" target="_blank" rel="noopener">Google Maps</a>'
 });
 
-const googleHybrid = L.tileLayer("https://mt{s}.google.com/vt/lyrs=y&hl=zh-TW&x={x}&y={y}&z={z}", {
+const googleHybrid = L.tileLayer(`https://mt{s}.google.com/vt/lyrs=y&hl=${MAP_HL}&x={x}&y={y}&z={z}`, {
   subdomains: ['0','1','2','3'],
   maxZoom: 21,
   maxNativeZoom: 19,
-  attribution: '&copy; <a href="https://maps.google.com" target="_blank" rel="noopener">Google Maps 衛星混合</a>'
+  attribution: '&copy; <a href="https://maps.google.com" target="_blank" rel="noopener">Google Maps</a>'
 });
 
-const googleTerrain = L.tileLayer("https://mt{s}.google.com/vt/lyrs=p&hl=zh-TW&x={x}&y={y}&z={z}", {
+const googleTerrain = L.tileLayer(`https://mt{s}.google.com/vt/lyrs=p&hl=${MAP_HL}&x={x}&y={y}&z={z}`, {
   subdomains: ['0','1','2','3'],
   maxZoom: 21,
   maxNativeZoom: 15,
-  attribution: '&copy; <a href="https://maps.google.com" target="_blank" rel="noopener">Google Maps 地形</a>'
+  attribution: '&copy; <a href="https://maps.google.com" target="_blank" rel="noopener">Google Maps</a>'
 });
 
 // 預設載入標準街道圖
@@ -1031,9 +1201,9 @@ googleRoads.addTo(map);
 
 // 提供左上角底圖快速切換（避免與右上角收合面板按鈕重疊衝突）
 L.control.layers({
-  "Google 街道地圖": googleRoads,
-  "Google 衛星混合": googleHybrid,
-  "Google 地形圖": googleTerrain
+  [t("layerRoad")]: googleRoads,
+  [t("layerHybrid")]: googleHybrid,
+  [t("layerTerrain")]: googleTerrain
 }, null, { position: "topleft" }).addTo(map);
 
 // 在左下角加入「我的定位」按鈕
@@ -1043,9 +1213,9 @@ const LocControl = L.Control.extend({
     const container = L.DomUtil.create("div", "leaflet-bar leaflet-control leaflet-control-locate");
     const btn = L.DomUtil.create("a", "locate-btn", container);
     btn.href = "#";
-    btn.title = "我的定位（儲存後不再重複彈窗確認）";
+    btn.title = t("locateTitle");
     btn.setAttribute("role", "button");
-    btn.setAttribute("aria-label", "我的定位");
+    btn.setAttribute("aria-label", t("locateBtn"));
     btn.innerHTML = `
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="7"></circle>
@@ -1058,9 +1228,9 @@ const LocControl = L.Control.extend({
     // 按鈕 2: 在地圖上手動點選位置
     const btnPick = L.DomUtil.create("a", "pick-btn", container);
     btnPick.href = "#";
-    btnPick.title = "在地圖上直接點擊自訂我的真實位置";
+    btnPick.title = t("pickTitle");
     btnPick.setAttribute("role", "button");
-    btnPick.setAttribute("aria-label", "點圖定位");
+    btnPick.setAttribute("aria-label", t("pickBtn"));
     btnPick.innerHTML = `
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -1151,7 +1321,7 @@ function renderUserLocation(lat, lon, accuracy, method, city) {
 
   const icon = L.divIcon({
     className: "gmap-user-loc-icon",
-    html: `<div class="gmap-user-loc-wrapper" title="我的位置（可隨時拖曳微調，點擊展開選單）"><div class="gmap-pulse-ring"></div><div class="gmap-core-dot"></div></div>`,
+    html: `<div class="gmap-user-loc-wrapper" title="${t("userDotTitle")}"><div class="gmap-pulse-ring"></div><div class="gmap-core-dot"></div></div>`,
     iconSize: [28, 28],
     iconAnchor: [14, 14],
     popupAnchor: [0, -14]
@@ -1198,19 +1368,19 @@ function refreshUserPopup() {
 function buildUserPopupHtml({ lat, lon, accuracy, method, city }) {
   // 位置來源說明
   const isAuto = method === "gps" || method === "ip";
-  let sourceIcon = ICONS.pin, sourceTitle = "手動釘選", sourceDetail = "你在地圖上指定的位置";
+  let sourceIcon = ICONS.pin, sourceTitle = t("srcManual"), sourceDetail = t("srcManualD");
   if (method === "gps") {
-    sourceIcon = ICONS.gps; sourceTitle = "自動定位（GPS／WiFi）";
-    sourceDetail = accuracy ? `誤差約 ${formatDistance(accuracy / 1000)}` : "由瀏覽器提供的位置";
+    sourceIcon = ICONS.gps; sourceTitle = t("srcGps");
+    sourceDetail = accuracy ? t("srcGpsD", { d: formatDistance(accuracy / 1000) }) : t("srcGpsD2");
   } else if (method === "ip") {
-    sourceIcon = ICONS.globe; sourceTitle = "自動定位（網路 IP 估算）";
-    sourceDetail = `${city ? city + "，" : ""}誤差可能達數公里`;
+    sourceIcon = ICONS.globe; sourceTitle = t("srcIp");
+    sourceDetail = `${city ? escapeHtml(city) + (IS_EN ? ", " : "，") : ""}${t("srcIpD")}`;
   } else if (method === "dragged") {
-    sourceTitle = "手動調整";
-    sourceDetail = "你拖曳藍點調整過的位置";
+    sourceTitle = t("srcDrag");
+    sourceDetail = t("srcDragD");
   }
   const ipWarning = method === "ip"
-    ? `<div class="uloc-notice">${ICONS.warning}<span>使用公司網路或 VPN 時，IP 估算常會偏離實際位置。位置不對的話，請改用「在地圖上指定」。</span></div>`
+    ? `<div class="uloc-notice">${ICONS.warning}<span>${escapeHtml(t("ipWarn"))}</span></div>`
     : "";
 
   // 最近的營業中據點
@@ -1220,14 +1390,14 @@ function buildUserPopupHtml({ lat, lon, accuracy, method, city }) {
     .sort((a, b) => a.d - b.d)[0];
   const nearestHtml = nearest ? `
       <div class="uloc-section">
-        <div class="uloc-label">離你最近的據點</div>
+        <div class="uloc-label">${t("nearestLoc")}</div>
         <div class="uloc-nearest">
           <span class="uloc-dot" style="background:${CATS[nearest.s.cat].color}"></span>
           <div class="uloc-nearest-text">
-            <div class="uloc-nearest-name">${nearest.s.zh}</div>
+            <div class="uloc-nearest-name">${sName(nearest.s)}</div>
             <div class="uloc-nearest-dist">${travelText(region + nearest.s.n, nearest.d)}・${CATS[nearest.s.cat].label.split("（")[0]}</div>
           </div>
-          <a class="uloc-btn uloc-btn--emph uloc-btn--xs" href="${gmapsUrl(nearest.s)}" target="_blank" rel="noopener">${ICONS.navigate} 導航</a>
+          <a class="uloc-btn uloc-btn--emph uloc-btn--xs" href="${gmapsUrl(nearest.s)}" target="_blank" rel="noopener">${ICONS.navigate} ${t("navigate")}</a>
         </div>
       </div>` : "";
 
@@ -1236,19 +1406,19 @@ function buildUserPopupHtml({ lat, lon, accuracy, method, city }) {
       <div class="uloc-head">
         <span class="uloc-head-icon">${sourceIcon}</span>
         <div>
-          <div class="uloc-title">我的位置</div>
+          <div class="uloc-title">${t("myLocation")}</div>
           <div class="uloc-source">${sourceTitle}<span class="uloc-source-detail">${sourceDetail}</span></div>
         </div>
       </div>
       ${ipWarning}
       ${nearestHtml}
       <div class="uloc-actions">
-        <button class="uloc-btn uloc-btn--emph" onclick="map.closePopup();requestFreshLocation()">${ICONS.gps} ${isAuto ? "重新自動定位" : "改用自動定位"}</button>
-        <button class="uloc-btn uloc-btn--secondary" onclick="map.closePopup();enterMapPickMode()">${ICONS.pin} 在地圖上指定</button>
+        <button class="uloc-btn uloc-btn--emph" onclick="map.closePopup();requestFreshLocation()">${ICONS.gps} ${isAuto ? t("reAuto") : t("toAuto")}</button>
+        <button class="uloc-btn uloc-btn--secondary" onclick="map.closePopup();enterMapPickMode()">${ICONS.pin} ${t("setOnMap")}</button>
       </div>
       <div class="uloc-foot">
-        <span>可直接拖曳藍點微調</span>
-        <button class="uloc-link" onclick="clearUserLocation()">清除我的位置</button>
+        <span>${t("dragHint")}</span>
+        <button class="uloc-link" onclick="clearUserLocation()">${t("clearLoc")}</button>
       </div>
     </div>`;
 }
@@ -1367,7 +1537,7 @@ async function requestFreshLocation() {
   if (btn) btn.classList.remove("locating");
 
   if (!gotLocation) {
-    alert("瀏覽器無法取得自動定位（本機 file:// 模式受瀏覽器安全限制，且網路 IP 定位暫時不可用）。\n建議：您可以直接點選右側門市清單查看各據點！");
+    alert(t("locFail"));
   }
 }
 
@@ -1396,21 +1566,21 @@ function toggleAside() {
     // 手機版：門市列表／篩選是由下往上滑出的漢堡面板，地圖預設全螢幕
     const isOpen = wrap.classList.toggle("mobile-sheet-open");
     if (isOpen) {
-      btn.innerHTML = `<span class="toggle-icon">${ICONS.close}</span><span>關閉</span>`;
-      btn.title = "關閉門市列表";
+      btn.innerHTML = `<span class="toggle-icon">${ICONS.close}</span><span>${t("close")}</span>`;
+      btn.title = t("closeListTitle");
     } else {
-      btn.innerHTML = `<span class="toggle-icon">${ICONS.hamburger}</span><span>門市列表</span>`;
-      btn.title = "顯示門市列表與篩選";
+      btn.innerHTML = `<span class="toggle-icon">${ICONS.hamburger}</span><span>${t("storeList")}</span>`;
+      btn.title = t("storeListTitle");
     }
   } else {
     // 桌面版：原本的收合／展開側欄面板
     const isCollapsed = wrap.classList.toggle("aside-collapsed");
     if (isCollapsed) {
-      btn.innerHTML = `<span class="toggle-icon">${ICONS.chevronLeft}</span><span>展開清單</span>`;
-      btn.title = "展開右側門市列表";
+      btn.innerHTML = `<span class="toggle-icon">${ICONS.chevronLeft}</span><span>${t("showList")}</span>`;
+      btn.title = t("showListTitle");
     } else {
-      btn.innerHTML = `<span class="toggle-icon">${ICONS.chevronRight}</span><span>收合面板</span>`;
-      btn.title = "收合右側門市列表";
+      btn.innerHTML = `<span class="toggle-icon">${ICONS.chevronRight}</span><span>${t("hideList")}</span>`;
+      btn.title = t("hideListTitle");
     }
   }
   wrap.scrollLeft = 0;
@@ -1427,8 +1597,8 @@ function closeMobileSheet() {
   wrap.classList.remove("mobile-sheet-open");
   const btn = document.getElementById("toggleAsideBtn");
   if (btn) {
-    btn.innerHTML = `<span class="toggle-icon">${ICONS.hamburger}</span><span>門市列表</span>`;
-    btn.title = "顯示門市列表與篩選";
+    btn.innerHTML = `<span class="toggle-icon">${ICONS.hamburger}</span><span>${t("storeList")}</span>`;
+    btn.title = t("storeListTitle");
   }
 }
 
@@ -1478,10 +1648,10 @@ function formatDistance(km) {
 
 /* ---------- 交通時間（透過 Netlify Function 呼叫 Google Routes API） ---------- */
 const TRAVEL_MODES = {
-  STRAIGHT: { label: "直線", icon: () => ICONS.nearMe },
-  DRIVE:    { label: "開車", icon: () => ICONS.car },
-  TRANSIT:  { label: "大眾運輸", icon: () => ICONS.transit },
-  WALK:     { label: "步行", icon: () => ICONS.walk },
+  STRAIGHT: { get label() { return t("modeStraight"); }, icon: () => ICONS.nearMe },
+  DRIVE:    { get label() { return t("modeDrive"); }, icon: () => ICONS.car },
+  TRANSIT:  { get label() { return t("modeTransit"); }, icon: () => ICONS.transit },
+  WALK:     { get label() { return t("modeWalk"); }, icon: () => ICONS.walk },
 };
 const ROUTES_ENDPOINT = "/.netlify/functions/routes";
 const ROUTE_TOP_N = 5;       // 只查直線距離最近的幾間，控制 API 用量
@@ -1503,22 +1673,22 @@ function routeFor(storeKey) {
 
 function formatDuration(sec) {
   const m = Math.max(1, Math.round(sec / 60));
-  if (m < 60) return `${m} 分鐘`;
+  if (m < 60) return t("min", { m });
   const h = Math.floor(m / 60), r = m % 60;
-  return r ? `${h} 小時 ${r} 分` : `${h} 小時`;
+  return r ? t("hourMin", { h, r }) : t("hour", { h });
 }
 
 function travelText(storeKey, straightKm) {
-  const straight = `直線 ${formatDistance(straightKm)}`;
+  const straight = t("straightDist", { d: formatDistance(straightKm) });
   if (travelMode === "STRAIGHT") return straight;
   const label = TRAVEL_MODES[travelMode].label;
-  if (travelMode === "WALK" && straightKm > WALK_MAX_KM) return `${straight}（不建議步行）`;
+  if (travelMode === "WALK" && straightKm > WALK_MAX_KM) return straight + t("tooFarWalk");
   const r = routeFor(storeKey);
-  if (r === "loading") return `${label}計算中…`;
+  if (r === "loading") return t("calculating", { mode: modeWord(label) });
   if (r && r.seconds != null) {
-    return `${label} ${formatDuration(r.seconds)}${r.meters ? `・${formatDistance(r.meters / 1000)}` : ""}`;
+    return `${IS_EN ? label + ": " : label + " "}${formatDuration(r.seconds)}${r.meters ? `・${formatDistance(r.meters / 1000)}` : ""}`;
   }
-  if (r && r.error === "NO_ROUTE") return `查無${label}路線・${straight}`;
+  if (r && r.error === "NO_ROUTE") return t("noRouteShort", { mode: modeWord(label), s: straight });
   return straight;
 }
 
@@ -1610,22 +1780,35 @@ function renderTravelModes() {
   if (!getUserLocationCoords()) { el.innerHTML = ""; el.hidden = true; return; }
   el.hidden = false;
   el.innerHTML = `
-    <div class="travel-seg" role="radiogroup" aria-label="距離計算方式">
+    <div class="travel-seg" role="radiogroup" aria-label="${t("distanceModeAria")}">
       ${Object.entries(TRAVEL_MODES).map(([k, m]) => `
         <button role="radio" aria-checked="${k === travelMode}" class="travel-seg-btn${k === travelMode ? " active" : ""}" onclick="setTravelMode('${k}')">${m.icon()}<span>${m.label}</span></button>`).join("")}
     </div>
     ${travelMode !== "STRAIGHT" ? `<div class="travel-hint">${travelUnavailable
-      ? "暫時無法取得交通時間，先顯示直線距離。"
-      : `顯示離你最近 ${ROUTE_TOP_N} 間的${TRAVEL_MODES[travelMode].label}時間（Google 地圖資料），其餘為直線距離。`}</div>` : ""}`;
+      ? t("travelUnavail")
+      : t("travelHint", { n: ROUTE_TOP_N, mode: modeWord(TRAVEL_MODES[travelMode].label) })}</div>` : ""}`;
 }
 
 /* ---------- 地圖路線（類似 Google 地圖的路線規劃） ---------- */
 const ROUTE_MODES = ["DRIVE", "TRANSIT", "WALK"];
 const GMAPS_MODE = { DRIVE: "driving", TRANSIT: "transit", WALK: "walking" };
-const VEHICLE_LABEL = { SUBWAY: "地鐵", METRO_RAIL: "地鐵", HEAVY_RAIL: "鐵路", COMMUTER_TRAIN: "火車", RAIL: "鐵路",
-  HIGH_SPEED_TRAIN: "高鐵", LONG_DISTANCE_TRAIN: "火車", LIGHT_RAIL: "輕鐵", TRAM: "電車", MONORAIL: "單軌",
-  BUS: "巴士", INTERCITY_BUS: "客運", TROLLEYBUS: "巴士", SHARE_TAXI: "小巴", FERRY: "渡輪", CABLE_CAR: "纜車",
-  GONDOLA_LIFT: "纜車", FUNICULAR: "纜車" };
+const VEHICLE_LABEL = IS_EN
+  ? { SUBWAY: "Metro", METRO_RAIL: "Metro", HEAVY_RAIL: "Rail", COMMUTER_TRAIN: "Train", RAIL: "Rail",
+      HIGH_SPEED_TRAIN: "High-speed rail", LONG_DISTANCE_TRAIN: "Train", LIGHT_RAIL: "Light rail", TRAM: "Tram",
+      MONORAIL: "Monorail", BUS: "Bus", INTERCITY_BUS: "Coach", TROLLEYBUS: "Bus", SHARE_TAXI: "Minibus",
+      FERRY: "Ferry", CABLE_CAR: "Cable car", GONDOLA_LIFT: "Cable car", FUNICULAR: "Funicular" }
+  : { SUBWAY: "地鐵", METRO_RAIL: "地鐵", HEAVY_RAIL: "鐵路", COMMUTER_TRAIN: "火車", RAIL: "鐵路",
+      HIGH_SPEED_TRAIN: "高鐵", LONG_DISTANCE_TRAIN: "火車", LIGHT_RAIL: "輕鐵", TRAM: "電車", MONORAIL: "單軌",
+      BUS: "巴士", INTERCITY_BUS: "客運", TROLLEYBUS: "巴士", SHARE_TAXI: "小巴", FERRY: "渡輪", CABLE_CAR: "纜車",
+      GONDOLA_LIFT: "纜車", FUNICULAR: "纜車" };
+
+// Google 對台灣捷運常只提供英文路線名，中文介面依此對照表顯示正式中文名（比對時忽略大小寫、空白與連字號）
+const TW_LINE_ZH = [
+  ["tamsuixinyi", "淡水信義線"], ["songshanxindian", "松山新店線"], ["zhonghexinlu", "中和新蘆線"],
+  ["bannan", "板南線"], ["wenhu", "文湖線"], ["circularlightrail", "環狀輕軌"], ["circular", "環狀線"],
+  ["airport", "桃園機場捷運"], ["danhai", "淡海輕軌"], ["ankeng", "安坑輕軌"],
+  ["red", "紅線"], ["orange", "橘線"], ["green", "綠線"], ["blue", "藍線"], ["brown", "棕線"], ["yellow", "環狀線"],
+];
 const routeResultCache = {};   // "模式|起點|據點" -> route | null
 let routeLayer = null;
 let activeRoute = null;        // { storeKey, mode }
@@ -1690,7 +1873,7 @@ async function loadAndDrawRoute(s, storeKey, mode) {
       const res = await fetch(ROUTES_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "route", mode, origin: { lat: loc.lat, lon: loc.lon }, destination: { lat: s.lat, lon: s.lon } }),
+        body: JSON.stringify({ type: "route", mode, lang: ROUTES_LANG, origin: { lat: loc.lat, lon: loc.lon }, destination: { lat: s.lat, lon: s.lon } }),
       });
       if (res.ok) route = (await res.json()).route; else failed = true;
     } catch (e) { failed = true; }
@@ -1750,11 +1933,16 @@ function drawRoute(route, mode, s) {
   });
 }
 
-// Google 對部分車種只給英文類別名（如台鐵區間車 "Local Train"），這種情況改顯示中文車種；路線號碼（63）與中文名保留
+// 中文介面：Google 給英文路線名時，先查台灣捷運對照表；查不到的英文類別名（如台鐵 "Local Train"）改顯示中文車種。
+// 路線號碼（63）與原本就是中文的名稱保留不變。英文介面直接使用 Google 的名稱。
 function lineName(line) {
-  const vehicle = VEHICLE_LABEL[line.vehicle] || "大眾運輸";
-  if (!line.name || /^[A-Za-z\s.'-]+$/.test(line.name)) return vehicle;
-  return line.name;
+  const vehicle = VEHICLE_LABEL[line.vehicle] || t("transitGeneric");
+  if (!line.name) return vehicle;
+  if (IS_EN || !/^[A-Za-z0-9\s.'()\/-]+$/.test(line.name)) return line.name;
+  const key = (line.full || line.name).toLowerCase().replace(/line|metro|mrt|[^a-z]/g, "");
+  const hit = key && TW_LINE_ZH.find(([k]) => key.includes(k));
+  if (hit) return hit[1];
+  return /[A-Za-z]/.test(line.name) ? vehicle : line.name;
 }
 
 function routeStepsHtml(route) {
@@ -1762,12 +1950,12 @@ function routeStepsHtml(route) {
   if (!steps.length) return "";
   const chips = steps.map(st => st.line
     ? `<span class="rt-chip rt-chip--line" style="background:${st.line.color || "#0058A3"};color:${st.line.textColor || "#fff"}">${ICONS.transit}${lineName(st.line)}</span>`
-    : `<span class="rt-chip">${ICONS.walk}${st.seconds ? Math.max(1, Math.round(st.seconds / 60)) + " 分" : "步行"}</span>`
+    : `<span class="rt-chip">${ICONS.walk}${st.seconds ? t("walkChipMin", { m: Math.max(1, Math.round(st.seconds / 60)) }) : t("walkWord")}</span>`
   ).join(`<span class="rt-sep">›</span>`);
   const details = steps.filter(st => st.line).map(st => `
     <li><span class="rt-dot" style="background:${st.line.color || "#0058A3"}"></span>
       <span><b>${lineName(st.line)}</b>${VEHICLE_LABEL[st.line.vehicle] && lineName(st.line) !== VEHICLE_LABEL[st.line.vehicle] ? `（${VEHICLE_LABEL[st.line.vehicle]}）` : ""}
-      ${st.from} → ${st.to}${st.stops ? `・${st.stops} 站` : ""}</span></li>`).join("");
+      ${escapeHtml(st.from)} → ${escapeHtml(st.to)}${st.stops ? t("stops", { n: st.stops }) : ""}</span></li>`).join("");
   return `<div class="rt-chips">${chips}</div>${details ? `<ul class="rt-details">${details}</ul>` : ""}`;
 }
 
@@ -1780,34 +1968,35 @@ function renderRoutePanel(s, mode, state) {
 
   let body;
   if (state.needLocation) {
-    body = `<div class="rt-msg">要規劃路線，請先設定你的位置。</div>
+    body = `<div class="rt-msg">${t("needLoc")}</div>
       <div class="rt-actions">
-        <button class="uloc-btn uloc-btn--emph" onclick="requestFreshLocation()">${ICONS.gps} 自動定位</button>
-        <button class="uloc-btn uloc-btn--secondary" onclick="enterMapPickMode()">${ICONS.pin} 在地圖上指定</button>
+        <button class="uloc-btn uloc-btn--emph" onclick="requestFreshLocation()">${ICONS.gps} ${t("autoLocate")}</button>
+        <button class="uloc-btn uloc-btn--secondary" onclick="enterMapPickMode()">${ICONS.pin} ${t("setOnMap")}</button>
       </div>`;
   } else if (state.loading) {
-    body = `<div class="rt-msg">正在規劃${TRAVEL_MODES[mode].label}路線…</div>`;
+    body = `<div class="rt-msg">${t("planning", { mode: modeWord(TRAVEL_MODES[mode].label) })}</div>`;
   } else if (state.error) {
-    body = `<div class="rt-msg">暫時無法取得路線，請稍後再試，或直接用 Google 地圖導航。</div>`;
+    body = `<div class="rt-msg">${t("routeErr")}</div>`;
   } else if (state.noRoute) {
-    body = `<div class="rt-msg">查無${TRAVEL_MODES[mode].label}路線，請改用其他交通方式。</div>`;
+    body = `<div class="rt-msg">${t("noRoute", { mode: modeWord(TRAVEL_MODES[mode].label) })}</div>`;
   } else {
     const r = state.route;
     body = `<div class="rt-summary"><span class="rt-time">${formatDuration(r.seconds)}</span><span class="rt-dist">${r.meters ? formatDistance(r.meters / 1000) : ""}</span></div>
-      ${mode === "TRANSIT" ? routeStepsHtml(r) : ""}`;
+      ${mode === "TRANSIT" ? routeStepsHtml(r) : ""}
+      ${mode === "DRIVE" ? `<div class="rt-note">${t("noTraffic")}</div>` : ""}`;
   }
 
   panel.innerHTML = `
     <div class="rt-head">
       <div class="rt-title-wrap">
-        <div class="rt-label">路線前往</div>
-        <div class="rt-title"><span class="uloc-dot" style="background:${CATS[s.cat].color}"></span>${s.zh}</div>
+        <div class="rt-label">${t("routeTo")}</div>
+        <div class="rt-title"><span class="uloc-dot" style="background:${CATS[s.cat].color}"></span>${sName(s)}</div>
       </div>
-      <button class="rt-close" onclick="clearRoute()" aria-label="關閉路線">${ICONS.close}</button>
+      <button class="rt-close" onclick="clearRoute()" aria-label="${t("closeRoute")}">${ICONS.close}</button>
     </div>
-    <div class="travel-seg" role="radiogroup" aria-label="交通方式">${tabs}</div>
+    <div class="travel-seg" role="radiogroup" aria-label="${t("travelModeAria")}">${tabs}</div>
     ${body}
-    ${state.needLocation ? "" : `<a class="uloc-btn uloc-btn--emph rt-nav" href="${directionsUrl(s, mode)}" target="_blank" rel="noopener">${ICONS.navigate} 用 Google 地圖導航</a>`}`;
+    ${state.needLocation ? "" : `<a class="uloc-btn uloc-btn--emph rt-nav" href="${directionsUrl(s, mode)}" target="_blank" rel="noopener">${ICONS.navigate} ${t("openGmapsNav")}</a>`}`;
   panel.hidden = false;
 }
 
@@ -1846,21 +2035,21 @@ function popupHtml(s){
   const userLoc = getUserLocationCoords();
   const dist = userLoc ? calcDistanceKm(userLoc.lat, userLoc.lon, s.lat, s.lon) : null;
   const distHtml = dist != null ? `<span style="font-size:12px;color:#111;font-weight:700;margin-left:6px;display:inline-flex;align-items:center;gap:4px;">${travelBadgeHtml(region + s.n, dist)}</span>` : '';
-  const closedHtml = s.closed ? `<span class="closed-badge" style="background:#607D8B;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:5px;">${s.closed}</span>` : '';
-  const lockerHtml = s.locker ? `<div style="font-size:11.5px;color:#0058A3;font-weight:700;background:#EBF3FA;padding:3px 8px;border-radius:6px;margin-bottom:6px;display:inline-flex;align-items:center;gap:4px;">${ICONS.locker} 自助提貨櫃：${s.locker}</div>` : '';
+  const closedHtml = s.closed ? `<span class="closed-badge" style="background:#607D8B;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:5px;">${sClosed(s)}</span>` : '';
+  const lockerHtml = s.locker ? `<div style="font-size:11.5px;color:#0058A3;font-weight:700;background:#EBF3FA;padding:3px 8px;border-radius:6px;margin-bottom:6px;display:inline-flex;align-items:center;gap:4px;">${ICONS.locker} ${t("lockerInfo", { x: sLocker(s) })}</div>` : '';
   return `<div class="pop">
-    <h3>${s.zh}</h3>
-    <div class="en">${s.en}</div>
+    <h3>${sName(s)}</h3>
+    <div class="en">${sAltName(s)}</div>
     <div style="margin-bottom:6px;">
       <span class="tag" style="background:${c.color}">${c.label.split("（")[0]}</span>
       ${closedHtml}
       ${distHtml}
     </div>
     ${lockerHtml}
-    <div class="addr">${s.addr}</div>
+    <div class="addr">${sAddr(s)}</div>
     <div class="pop-actions">
-      ${s.closed ? "" : `<button class="uloc-btn uloc-btn--emph uloc-btn--xs" onclick="showRoute('${region + s.n}')">${ICONS.route} 路線</button>`}
-      <a class="uloc-btn uloc-btn--secondary uloc-btn--xs" href="${gmapsUrl(s)}" target="_blank" rel="noopener">${ICONS.navigate} Google 地圖</a>
+      ${s.closed ? "" : `<button class="uloc-btn uloc-btn--emph uloc-btn--xs" onclick="showRoute('${region + s.n}')">${ICONS.route} ${t("route")}</button>`}
+      <a class="uloc-btn uloc-btn--secondary uloc-btn--xs" href="${gmapsUrl(s)}" target="_blank" rel="noopener">${ICONS.navigate} ${t("gmaps")}</a>
     </div>
   </div>`;
 }
@@ -1876,7 +2065,7 @@ function renderChips() {
   // 1. 全部 Chip
   const allBtn = document.createElement("button");
   allBtn.className = "chip" + (activeFilterCat === "all" ? " active" : "");
-  allBtn.innerHTML = `<span>全部</span><span class="chip-count">${d.stores.length}</span>`;
+  allBtn.innerHTML = `<span>${t("all")}</span><span class="chip-count">${d.stores.length}</span>`;
   allBtn.onclick = () => {
     activeFilterCat = "all";
     render();
@@ -1902,11 +2091,11 @@ function renderChips() {
   // 3. 離我最近 排序 Chip
   const distBtn = document.createElement("button");
   distBtn.className = "chip sort-nearest" + (sortByDistance ? " active" : "");
-  distBtn.innerHTML = `${ICONS.nearMe}<span>離我最近</span>`;
-  distBtn.title = userLoc ? "點擊切換：依據與我的位置由近到遠排序" : "尚未設定我的位置，點擊即可在地圖上指定或自動偵測！";
+  distBtn.innerHTML = `${ICONS.nearMe}<span>${t("nearestSort")}</span>`;
+  distBtn.title = userLoc ? t("nearestSortTitle") : t("nearestSortNoLoc");
   distBtn.onclick = () => {
     if (!getUserLocationCoords()) {
-      alert("請先設定您的位置！\n您可點擊左下角「點圖定位」直接在地圖上指定，或點擊「自動定位」！");
+      alert(t("setLocFirst"));
       enterMapPickMode();
       return;
     }
@@ -1923,7 +2112,38 @@ function renderNote() {
   const count = cat => stores.filter(s => s.cat === cat && !s.closed).length;
   const closedCount = stores.filter(s => s.closed).length;
   const closedLine = closedCount
-    ? `<li>標示「已結束／已結業」的據點已停止營業，保留在清單中僅供參考。</li>` : "";
+    ? (IS_EN
+      ? `<li>Locations marked "Ended" or "Closed" are no longer operating and are listed for reference only.</li>`
+      : `<li>標示「已結束／已結業」的據點已停止營業，保留在清單中僅供參考。</li>`) : "";
+
+  if (IS_EN && region === "hk") {
+    const lockerCount = stores.filter(s => s.locker && !s.closed).length;
+    const pickupCount = count("marketplace") + count("3hreesixty") + count("wellcome");
+    el.innerHTML = `
+      <div class="note-title">About Hong Kong &amp; Macau locations</div>
+      <ul>
+        <li><b>Pick-up lockers</b>: ${lockerCount} locations let you collect online orders from a self-service locker. Opening hours vary by locker and are shown on each card. Search "locker" to find them quickly.</li>
+        <li><b>Supermarket pick-up points</b>: ${pickupCount} partner supermarkets (Market Place, 3hreesixty and Wellcome) where you can collect online orders. There's no product display or in-store shopping.</li>
+        <li><b>Plan and Order Points</b>: get home planning advice and place orders. Items are delivered or collected separately.</li>
+        <li><b>Popup stores</b>: open for a limited time only, so check they're still open before you go.</li>
+        ${closedLine}
+      </ul>
+      <div>For opening hours, pick-up arrangements and temporary closures, see the latest updates on <a href="https://www.ikea.com.hk/en/where-are-we" target="_blank" rel="noopener">IKEA Hong Kong's store pages</a>.</div>`;
+    return;
+  }
+  if (IS_EN) {
+    el.innerHTML = `
+      <div class="note-title">About Taiwan stores</div>
+      <ul>
+        <li><b>Full-size stores</b>: complete showrooms, a self-serve warehouse and the Swedish restaurant.</li>
+        <li><b>City shops</b>: smaller stores with a limited range on display and in stock. For large furniture, order online for delivery or visit a full-size store.</li>
+        <li><b>Planning &amp; pick-up points</b>: get home planning advice, place orders and collect them. There's no full showroom.</li>
+        <li><b>Pop-up stores</b>: open for a limited time only, so check the opening period before you go.</li>
+        ${closedLine}
+      </ul>
+      <div>For opening hours, parking and temporary closures (such as typhoon days), see the latest updates on <a href="https://www.ikea.com.tw/en/store/index" target="_blank" rel="noopener">IKEA Taiwan's store pages</a>.</div>`;
+    return;
+  }
 
   if (region === "hk") {
     const lockerCount = stores.filter(s => s.locker && !s.closed).length;
@@ -1975,7 +2195,7 @@ function render(){
   // 篩選門市
   let stores = d.stores.filter(s => {
     const matchCat = (activeFilterCat === "all") || (s.cat === activeFilterCat);
-    const matchQ = !q || (s.zh + s.en + s.addr + (s.locker || '') + (s.closed || '')).toLowerCase().includes(q);
+    const matchQ = !q || (s.zh + s.en + s.addr + (s.addrEn || '') + (s.locker || '') + (s.lockerEn || '') + (s.closed || '') + (s.closedEn || '') + (s.locker ? t("lockerTag") : '')).toLowerCase().includes(q);
     return matchCat && matchQ;
   });
 
@@ -1999,9 +2219,9 @@ function render(){
   // 更新頂部摘要行
   const summaryEl = document.getElementById("listCountHeader");
   if (summaryEl) {
-    const catLabel = activeFilterCat === "all" ? "全部據點" : (CATS[activeFilterCat]?.label.split("（")[0] || "");
-    const sortBadge = sortByDistance ? `<span style="color:#F26A1B;font-size:11.5px;font-weight:800;display:inline-flex;align-items:center;gap:4px;">${ICONS.nearMe} 已依距離由近到遠排序</span>` : '';
-    summaryEl.innerHTML = `<span>${catLabel}：共 <b>${stores.length}</b> 處</span>${sortBadge}`;
+    const catLabel = activeFilterCat === "all" ? t("allLocations") : (CATS[activeFilterCat]?.label.split("（")[0] || "");
+    const sortBadge = sortByDistance ? `<span style="color:#F26A1B;font-size:11.5px;font-weight:800;display:inline-flex;align-items:center;gap:4px;">${ICONS.nearMe} ${t("sortedBadge")}</span>` : '';
+    summaryEl.innerHTML = `<span>${t("countSummary", { cat: catLabel, n: stores.length })}</span>${sortBadge}`;
   }
 
   if (stores.length === 0) {
@@ -2013,8 +2233,8 @@ function render(){
           <line x1="8" y1="11" x2="14" y2="11"></line>
         </svg>
       </div>
-      未找到符合「${q}」的門市或提貨站<br>
-      <button onclick="clearSearch()" style="margin-top:12px;background:#0058A3;color:#fff;border:none;padding:6px 14px;border-radius:14px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">${ICONS.close} 清除搜尋</button>
+      ${escapeHtml(t("noResult", { q }))}<br>
+      <button onclick="clearSearch()" style="margin-top:12px;background:#0058A3;color:#fff;border:none;padding:6px 14px;border-radius:14px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">${ICONS.close} ${t("clearSearch")}</button>
     </div>`;
     return;
   }
@@ -2035,8 +2255,8 @@ function render(){
     const el = document.createElement("div");
     el.className = "store" + (selectedKey === key ? " selected" : "");
     el.dataset.key = key;
-    const closedBadge = s.closed ? `<span class="closed-badge">${s.closed}</span>` : '';
-    const lockerBadge = s.locker ? `<span class="locker-badge" title="設有 IKEA 自助提貨櫃：${s.locker}">${ICONS.locker} 自助提貨櫃</span>` : '';
+    const closedBadge = s.closed ? `<span class="closed-badge">${sClosed(s)}</span>` : '';
+    const lockerBadge = s.locker ? `<span class="locker-badge" title="${t("lockerTitle", { x: sLocker(s) })}">${ICONS.locker} ${t("lockerTag")}</span>` : '';
     el.innerHTML = `
       <div class="badge" style="background:${c.color}">${s.n}</div>
       <div class="store-body">
@@ -2048,12 +2268,12 @@ function render(){
           </div>
           ${distStr ? `<span class="distance-badge" data-key="${key}">${distStr}</span>` : ''}
         </div>
-        <div class="name">${s.zh}　<span class="en">${s.en}</span></div>
-        <div class="addr">${s.addr}</div>
+        <div class="name">${sName(s)}${IS_EN ? " " : "　"}<span class="en">${sAltName(s)}</span></div>
+        <div class="addr">${sAddr(s)}</div>
         <div class="store-actions">
-          <button class="action-btn-view">${ICONS.pin} 查看</button>
-          ${s.closed ? "" : `<button class="action-btn-view" onclick="event.stopPropagation();showRoute('${key}')">${ICONS.route} 路線</button>`}
-          <a href="${gmapsUrl(s)}" target="_blank" rel="noopener" class="action-btn-nav">${ICONS.navigate} 導航</a>
+          <button class="action-btn-view">${ICONS.pin} ${t("view")}</button>
+          ${s.closed ? "" : `<button class="action-btn-view" onclick="event.stopPropagation();showRoute('${key}')">${ICONS.route} ${t("route")}</button>`}
+          <a href="${gmapsUrl(s)}" target="_blank" rel="noopener" class="action-btn-nav">${ICONS.navigate} ${t("navigate")}</a>
         </div>
       </div>`;
 
@@ -2120,11 +2340,11 @@ function syncToggleButtonForLayout() {
   const btn = document.getElementById("toggleAsideBtn");
   if (!btn) return;
   if (isMobileLayout()) {
-    btn.innerHTML = `<span class="toggle-icon">${ICONS.hamburger}</span><span>門市列表</span>`;
-    btn.title = "顯示門市列表與篩選";
+    btn.innerHTML = `<span class="toggle-icon">${ICONS.hamburger}</span><span>${t("storeList")}</span>`;
+    btn.title = t("storeListTitle");
   } else {
-    btn.innerHTML = `<span class="toggle-icon">${ICONS.chevronRight}</span><span>收合面板</span>`;
-    btn.title = "收合右側門市列表";
+    btn.innerHTML = `<span class="toggle-icon">${ICONS.chevronRight}</span><span>${t("hideList")}</span>`;
+    btn.title = t("hideListTitle");
   }
 }
 
@@ -2139,6 +2359,7 @@ window.addEventListener("resize", () => {
   map.invalidateSize();
 });
 
+applyStaticI18n();
 syncToggleButtonForLayout();
 setRegion("hk");
 </script>

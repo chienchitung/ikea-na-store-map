@@ -102,14 +102,14 @@ async function handleMatrix(key, { origin, destinations, mode }) {
   return json(200, { results });
 }
 
-async function handleRoute(key, { origin, destination, mode }) {
+async function handleRoute(key, { origin, destination, mode, lang }) {
   if (!isPoint(destination)) return json(400, { error: "BAD_DESTINATION" });
 
   const request = {
     origin: toWaypoint(origin),
     destination: toWaypoint(destination),
     travelMode: mode,
-    languageCode: "zh-TW",
+    languageCode: lang === "en" ? "en" : "zh-TW",
     computeAlternativeRoutes: false,
   };
   if (mode === "DRIVE") request.routingPreference = "TRAFFIC_UNAWARE";
@@ -153,6 +153,7 @@ async function handleRoute(key, { origin, destination, mode }) {
         const line = td.transitLine || {};
         step.line = {
           name: line.nameShort || line.name || "",
+          full: line.name || "",
           color: line.color || null,
           textColor: line.textColor || null,
           vehicle: line.vehicle?.type || null,
