@@ -747,6 +747,10 @@
   .rt-details .rt-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;}
   .rt-details b{color:var(--skapa-text);}
   .rt-nav{width:100%;margin-top:16px;}
+  /* 據點資訊框固定寬度，不隨店名／地址長短縮放，按鈕才不會被擠壓；手機螢幕過窄時自動縮小 */
+  .pop{width:272px;max-width:calc(100vw - 72px);}
+  .leaflet-popup-content:has(.pop){width:auto !important;}
+
   /* 地圖資訊框按鈕：<button> 與 <a> 統一尺寸（等高、等寬），避免 Leaflet 預設連結樣式干擾 */
   .pop-actions{display:flex;gap:8px;margin-top:12px;}
   .pop-actions .uloc-btn{
@@ -2297,7 +2301,7 @@ function render(){
     // 在地圖上繪製圖釘（只繪製目前篩選出的門市！）
     const mk = L.marker([s.lat, s.lon], {icon: makeIcon(s)})
       .addTo(map)
-      .bindPopup(() => popupHtml(s));
+      .bindPopup(() => popupHtml(s), { minWidth: 272, maxWidth: 300 });
     mk.on("click", () => selectStore(key, s, false));
     markers[key] = mk;
 
