@@ -49,11 +49,17 @@ async function callGoogle(url, key, fieldMask, body) {
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    console.error("Routes API error", res.status, await res.text());
-    return null;
+    const text = await res.text();
+    console.error("Routes API error", res.status, text);
+    // 只回傳 Google 的錯誤代碼與訊息（不含 key），方便從瀏覽器端排查
+    let message = "";
+    try { message = JSON.parse(text).error?.message || ""; } catch {}
+    return { __error: { status: res.status, message: message.slice(0, 300) } };
   }
   return res.json();
 }
+
+const upstreamError = data => json(502, { error: "UPSTREAM_ERROR", detail: data.__error });
 
 async function handleMatrix(key, { origin, destinations, mode }) {
   if (!Array.isArray(destinations) || destinations.length === 0 || destinations.length > MAX_DESTINATIONS) {
@@ -77,7 +83,7 @@ async function handleMatrix(key, { origin, destinations, mode }) {
     "originIndex,destinationIndex,duration,distanceMeters,condition",
     request
   );
-  if (!elements) return json(502, { error: "UPSTREAM_ERROR" });
+  if (elements.__error) return upstreamError(elements);
 
   const results = {};
   for (const el of Array.isArray(elements) ? elements : []) {
@@ -121,7 +127,7 @@ async function handleRoute(key, { origin, destination, mode }) {
   const fieldMask = (mode === "TRANSIT" ? base.concat(transitFields) : base).join(",");
 
   const data = await callGoogle("https://routes.googleapis.com/directions/v2:computeRoutes", key, fieldMask, request);
-  if (!data) return json(502, { error: "UPSTREAM_ERROR" });
+  if (data.__error) return upstreamError(data);
 
   const r = data.routes && data.routes[0];
   if (!r || !r.polyline) return json(200, { route: null });

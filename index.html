@@ -1538,9 +1538,12 @@ function updateTravelBadges() {
   renderTravelModes();
 }
 
+let routesFailedAt = 0;   // 服務出錯後冷卻一段時間，避免每次重畫清單都重打 API
+
 async function fetchRoutes(candidates) {
   const loc = getUserLocationCoords();
   if (!loc || travelMode === "STRAIGHT") return;
+  if (Date.now() - routesFailedAt < 60000) return;
   const mode = travelMode, oKey = originKey(loc);
   const targets = candidates
     .filter(c => !(mode === "WALK" && c.km > WALK_MAX_KM))
@@ -1573,6 +1576,7 @@ async function fetchRoutes(candidates) {
   } else {
     // 服務暫時無法使用：清掉 loading，下次切換時可重試，畫面先退回直線距離
     travelUnavailable = true;
+    routesFailedAt = Date.now();
     targets.forEach(c => { delete routeCache[`${mode}|${oKey}|${c.key}`]; });
   }
   updateTravelBadges();
@@ -1595,6 +1599,7 @@ function requestRoutesFor(visibleStores) {
 
 function setTravelMode(mode) {
   travelMode = mode;
+  routesFailedAt = 0;   // 使用者主動切換時允許立即重試
   try { localStorage.setItem("ikea_travel_mode", mode); } catch (e) {}
   render();
 }
@@ -1745,16 +1750,23 @@ function drawRoute(route, mode, s) {
   });
 }
 
+// Google 對部分車種只給英文類別名（如台鐵區間車 "Local Train"），這種情況改顯示中文車種；路線號碼（63）與中文名保留
+function lineName(line) {
+  const vehicle = VEHICLE_LABEL[line.vehicle] || "大眾運輸";
+  if (!line.name || /^[A-Za-z\s.'-]+$/.test(line.name)) return vehicle;
+  return line.name;
+}
+
 function routeStepsHtml(route) {
   const steps = route.steps || [];
   if (!steps.length) return "";
   const chips = steps.map(st => st.line
-    ? `<span class="rt-chip rt-chip--line" style="background:${st.line.color || "#0058A3"};color:${st.line.textColor || "#fff"}">${ICONS.transit}${st.line.name || VEHICLE_LABEL[st.line.vehicle] || "大眾運輸"}</span>`
+    ? `<span class="rt-chip rt-chip--line" style="background:${st.line.color || "#0058A3"};color:${st.line.textColor || "#fff"}">${ICONS.transit}${lineName(st.line)}</span>`
     : `<span class="rt-chip">${ICONS.walk}${st.seconds ? Math.max(1, Math.round(st.seconds / 60)) + " 分" : "步行"}</span>`
   ).join(`<span class="rt-sep">›</span>`);
   const details = steps.filter(st => st.line).map(st => `
     <li><span class="rt-dot" style="background:${st.line.color || "#0058A3"}"></span>
-      <span><b>${st.line.name || VEHICLE_LABEL[st.line.vehicle] || "大眾運輸"}</b>${VEHICLE_LABEL[st.line.vehicle] && st.line.name ? `（${VEHICLE_LABEL[st.line.vehicle]}）` : ""}
+      <span><b>${lineName(st.line)}</b>${VEHICLE_LABEL[st.line.vehicle] && lineName(st.line) !== VEHICLE_LABEL[st.line.vehicle] ? `（${VEHICLE_LABEL[st.line.vehicle]}）` : ""}
       ${st.from} → ${st.to}${st.stops ? `・${st.stops} 站` : ""}</span></li>`).join("");
   return `<div class="rt-chips">${chips}</div>${details ? `<ul class="rt-details">${details}</ul>` : ""}`;
 }
