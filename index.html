@@ -1004,7 +1004,7 @@ const I18N = {
     distanceModeAria: "距離計算方式",
     travelUnavail: "暫時無法取得交通時間，先顯示直線距離。",
     travelHint: "顯示離你最近 {n} 間的{mode}時間（Google 地圖資料），其餘為直線距離。",
-    transitGeneric: "大眾運輸", walkChipMin: "{m} 分", walkWord: "步行", stops: "・{n} 站",
+    transitGeneric: "大眾運輸", walkChipMin: "{m} 分", walkWord: "步行", stops: "・{n} 站", stop1: "・1 站",
     needLoc: "要規劃路線，請先設定你的位置。",
     planning: "正在規劃{mode}路線…",
     routeErr: "暫時無法取得路線，請稍後再試，或直接用 Google 地圖導航。",
@@ -1056,7 +1056,7 @@ const I18N = {
     distanceModeAria: "Distance mode",
     travelUnavail: "Travel times are unavailable right now, so straight-line distances are shown.",
     travelHint: "Showing {mode} times for the {n} nearest locations (Google Maps data). Others show straight-line distance.",
-    transitGeneric: "Transit", walkChipMin: "{m} min", walkWord: "Walk", stops: " · {n} stops",
+    transitGeneric: "Transit", walkChipMin: "{m} min", walkWord: "Walk", stops: " · {n} stops", stop1: " · 1 stop",
     needLoc: "Set your location first to plan a route.",
     planning: "Planning {mode} route…",
     routeErr: "We couldn't get a route right now. Try again later, or open directions in Google Maps.",
@@ -2003,8 +2003,8 @@ function routeStepsHtml(route) {
   ).join(`<span class="rt-sep">›</span>`);
   const details = steps.filter(st => st.line).map(st => `
     <li><span class="rt-dot" style="background:${st.line.color || "#0058A3"}"></span>
-      <span><b>${lineName(st.line)}</b>${VEHICLE_LABEL[st.line.vehicle] && lineName(st.line) !== VEHICLE_LABEL[st.line.vehicle] ? `（${VEHICLE_LABEL[st.line.vehicle]}）` : ""}
-      ${escapeHtml(st.from)} → ${escapeHtml(st.to)}${st.stops ? t("stops", { n: st.stops }) : ""}</span></li>`).join("");
+      <span><b>${lineName(st.line)}</b>${VEHICLE_LABEL[st.line.vehicle] && lineName(st.line) !== VEHICLE_LABEL[st.line.vehicle] ? (IS_EN ? ` (${VEHICLE_LABEL[st.line.vehicle]})` : `（${VEHICLE_LABEL[st.line.vehicle]}）`) : ""}
+      ${escapeHtml(st.from)} → ${escapeHtml(st.to)}${st.stops ? t(st.stops === 1 ? "stop1" : "stops", { n: st.stops }) : ""}</span></li>`).join("");
   return `<div class="rt-chips">${chips}</div>${details ? `<ul class="rt-details">${details}</ul>` : ""}`;
 }
 
