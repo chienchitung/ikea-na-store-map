@@ -1,0 +1,2134 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>IKEA 台灣・香港・澳門 門市地圖</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap">
+<link rel="preload" href="fonts/NotoIKEALatin-Regular.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="preload" href="fonts/NotoIKEALatin-Bold.ttf" as="font" type="font/ttf" crossorigin>
+<style>
+  :root{
+    --ikea-blue:#0058A3;
+    --ikea-yellow:#FFDB00;
+    --cat-store:#0058A3;   /* 色卡-藍 */
+    --cat-city:#F26A1B;    /* 色卡-橘 */
+    --cat-popup:#E75294;   /* 色卡-粉紅 */
+    --cat-macau:#008C46;   /* 色卡-綠 */
+    --cat-mp:#1B7545;      /* Market Place 綠 */
+    --cat-wc:#D9232A;      /* 惠康 紅 */
+    --bg:#CDE6F5;
+    --panel:#FFFFFF;
+  }
+  /* 與 IKEA 官網相同：Noto IKEA 負責英數字，中文由 Noto Sans TC 補上（SIL OFL 1.1 授權） */
+  @font-face{font-family:"Noto IKEA";font-style:normal;font-weight:400;font-display:swap;
+    src:local("Noto Sans IKEA"),url(fonts/NotoIKEALatin-Regular.ttf) format("truetype");}
+  @font-face{font-family:"Noto IKEA";font-style:normal;font-weight:700;font-display:swap;
+    src:local("Noto Sans IKEA"),url(fonts/NotoIKEALatin-Bold.ttf) format("truetype");}
+  *{box-sizing:border-box;margin:0;padding:0;font-family:"Noto IKEA","Noto Sans","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;}
+  /* 100dvh = 扣除手機瀏覽器網址列／工具列後實際可見的高度；100vh 會延伸到工具列底下，導致底部按鈕被切掉 */
+  body{background:var(--bg);height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
+
+  /* ---------- header ---------- */
+  header{
+    background:#fff;color:var(--ikea-blue);
+    display:flex;align-items:center;gap:16px;
+    padding:10px 20px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.15);z-index:1000;
+  }
+  .logo{height:38px;display:block;}
+  header h1{font-size:19px;font-weight:800;color:var(--ikea-blue);}
+  header .sub{font-size:12px;color:#666;margin-top:2px;}
+
+  /* region tabs */
+  .tabs{margin-left:auto;display:flex;gap:8px;}
+  .tab{
+    background:#fff;border:2px solid var(--ikea-blue);
+    color:var(--ikea-blue);padding:8px 22px;border-radius:24px;font-size:15px;font-weight:700;
+    cursor:pointer;transition:.2s;
+  }
+  .tab:hover{background:#EAF3FA;}
+  .tab.active{background:var(--ikea-yellow);color:var(--ikea-blue);border-color:var(--ikea-yellow);}
+
+  /* ---------- layout ---------- */
+  .wrap{flex:1;display:flex;min-height:0;position:relative;overflow:hidden;}
+  #map{flex:1;min-width:0;height:100%;}
+
+  /* collapse toggle button */
+  .toggle-aside-btn{
+    position:absolute;
+    top:14px;
+    right:414px;
+    z-index:1000;
+    background:#fff;
+    color:var(--ikea-blue);
+    border:2px solid var(--ikea-blue);
+    border-radius:20px;
+    padding:6px 14px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow:0 2px 8px rgba(0,0,0,.18);
+    display:flex;
+    align-items:center;
+    gap:6px;
+    transition:right .3s ease, background .15s, color .15s, transform .15s;
+    user-select:none;
+  }
+  .toggle-aside-btn:hover{
+    background:#EAF3FA;
+    transform:scale(1.02);
+  }
+  .wrap.aside-collapsed .toggle-aside-btn{
+    right:14px;
+    background:var(--ikea-blue);
+    color:#fff;
+  }
+  .wrap.aside-collapsed .toggle-aside-btn:hover{
+    background:#004a8a;
+  }
+
+  aside{
+    width:400px;flex-shrink:0;background:var(--bg);
+    overflow-y:auto;overflow-x:hidden;padding:14px;
+    transition:width .3s ease, padding .3s ease, opacity .25s ease;
+    box-shadow:-2px 0 8px rgba(0,0,0,.08);
+    z-index:999;
+  }
+  .wrap.aside-collapsed aside{
+    width:0 !important;
+    min-width:0 !important;
+    padding:0 !important;
+    margin:0 !important;
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    overflow:hidden !important;
+    box-shadow:none;
+  }
+  aside::-webkit-scrollbar{width:8px;}
+  aside::-webkit-scrollbar-thumb{background:rgba(0,88,163,.35);border-radius:4px;}
+
+  /* Sticky header at top of aside */
+  .aside-sticky-header{
+    position:sticky;
+    top:-14px;
+    background:var(--bg);
+    padding-top:14px;
+    padding-bottom:6px;
+    z-index:10;
+    margin:-14px -14px 6px -14px;
+    padding-left:14px;
+    padding-right:14px;
+  }
+  
+  .ui-icon{
+    display:inline-block;
+    vertical-align:-2px;
+    stroke:currentColor;
+    flex-shrink:0;
+  }
+
+  .search{
+    display:flex;align-items:center;background:#fff;border-radius:24px;
+    padding:8px 14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.12);
+  }
+  .search input{border:none;outline:none;flex:1;font-size:13.5px;background:transparent;}
+  .search .search-icon{
+    color:var(--ikea-blue);
+    margin-right:8px;
+    display:flex;
+    align-items:center;
+  }
+  .clear-search-btn{
+    background:none;border:none;color:#888;cursor:pointer;padding:2px 4px;
+    display:flex;align-items:center;justify-content:center;
+    transition:color .15s;
+  }
+  .clear-search-btn:hover{color:#333;}
+
+  /* Filter Chips Container */
+  .filter-chips{
+    display:flex;
+    gap:6px;
+    overflow-x:auto;
+    padding-bottom:6px;
+    scrollbar-width:none;
+    -webkit-mask-image:linear-gradient(to right, #000 calc(100% - 22px), transparent 100%);
+    mask-image:linear-gradient(to right, #000 calc(100% - 22px), transparent 100%);
+  }
+  .filter-chips::-webkit-scrollbar{display:none;}
+
+  .chip{
+    flex-shrink:0;
+    background:#fff;
+    border:1.5px solid #d0dbe5;
+    border-radius:18px;
+    padding:5px 12px;
+    font-size:12px;
+    font-weight:700;
+    color:#444;
+    cursor:pointer;
+    user-select:none;
+    display:flex;
+    align-items:center;
+    gap:5px;
+    transition:all .15s ease;
+    box-shadow:0 1px 3px rgba(0,0,0,0.06);
+  }
+  .chip:hover{
+    border-color:var(--ikea-blue);
+    color:var(--ikea-blue);
+    background:#F2F8FD;
+  }
+  .chip.active{
+    background:var(--ikea-blue);
+    color:#fff;
+    border-color:var(--ikea-blue);
+    box-shadow:0 2px 6px rgba(0,88,163,0.35);
+  }
+  .chip .chip-count{
+    background:rgba(0,0,0,0.08);
+    color:inherit;
+    font-size:11px;
+    border-radius:10px;
+    padding:1px 6px;
+    font-weight:800;
+  }
+  .chip.active .chip-count{
+    background:rgba(255,255,255,0.25);
+    color:#fff;
+  }
+  .chip.sort-nearest{
+    border-color:#F26A1B;
+    color:#F26A1B;
+  }
+  .chip.sort-nearest.active{
+    background:#F26A1B;
+    color:#fff;
+    border-color:#F26A1B;
+    box-shadow:0 2px 6px rgba(242,106,27,0.35);
+  }
+
+  /* Summary bar */
+  .list-summary-bar{
+    font-size:12px;
+    color:#445;
+    font-weight:700;
+    padding:4px 4px 8px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+
+  .cat-header{
+    color:#fff;font-size:14.5px;font-weight:800;
+    padding:8px 16px;border-radius:20px;margin:12px 0 8px;
+    display:flex;align-items:center;justify-content:space-between;
+    cursor:pointer;user-select:none;box-shadow:0 2px 5px rgba(0,0,0,.15);
+    transition:opacity .2s;
+  }
+  .cat-header .count{
+    background:rgba(255,255,255,.25);border-radius:12px;padding:1px 10px;font-size:12px;
+  }
+  .cat-header.off{opacity:.4;}
+
+  .store{
+    background:var(--panel);border-radius:12px;padding:12px 14px;margin-bottom:10px;
+    display:flex;gap:12px;cursor:pointer;
+    box-shadow:0 1px 4px rgba(0,0,0,.08);transition:all .18s ease;
+    border:2px solid transparent;
+  }
+  .store:hover{
+    transform:translateY(-2px);
+    box-shadow:0 4px 12px rgba(0,88,163,.15);
+    border-color:rgba(0,88,163,0.25);
+  }
+  .store.selected{
+    border-color:var(--ikea-blue);
+    background:#F5F9FD;
+    box-shadow:0 3px 10px rgba(0,88,163,0.22);
+  }
+  .badge{
+    width:30px;height:30px;border-radius:50%;flex-shrink:0;
+    color:#fff;font-weight:800;font-size:14px;
+    display:flex;align-items:center;justify-content:center;margin-top:2px;
+    box-shadow:0 1px 3px rgba(0,0,0,.3);
+  }
+  .store-body{
+    flex:1;
+    min-width:0;
+  }
+  .store-top-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:4px;
+    gap:6px;
+  }
+  .store-tag{
+    font-size:11px;
+    font-weight:700;
+    color:#fff;
+    padding:2px 8px;
+    border-radius:10px;
+    display:inline-block;
+  }
+  .distance-badge{
+    font-size:11.5px;
+    font-weight:800;
+    color:#F26A1B;
+    background:#FFF3EB;
+    padding:2px 8px;
+    border-radius:10px;
+    border:1px solid rgba(242,106,27,0.25);
+    display:inline-flex;
+    align-items:center;
+    gap:3px;
+  }
+  .locker-badge{
+    font-size:11px;
+    font-weight:700;
+    color:#0058A3;
+    background:#EBF3FA;
+    padding:2px 7px;
+    border-radius:10px;
+    border:1px solid rgba(0,88,163,0.22);
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    white-space:nowrap;
+  }
+  .closed-badge{
+    font-size:11px;
+    font-weight:700;
+    color:#fff;
+    background:#607D8B;
+    padding:2px 8px;
+    border-radius:10px;
+    display:inline-flex;
+    align-items:center;
+    white-space:nowrap;
+  }
+  .store .name{font-size:15px;font-weight:800;color:#222;line-height:1.3;}
+  .store .name .en{font-weight:600;color:#666;font-size:12.5px;}
+  .store .addr{font-size:12.5px;color:#555;margin-top:4px;line-height:1.45;}
+  
+  .store-actions{
+    display:flex;
+    gap:8px;
+    margin-top:8px;
+  }
+  .action-btn-view, .action-btn-nav{
+    padding:4px 10px;
+    border-radius:14px;
+    font-size:11.5px;
+    font-weight:700;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    cursor:pointer;
+    transition:all .15s;
+    border:none;
+  }
+  .action-btn-view{
+    background:#EAF3FA;
+    color:var(--ikea-blue);
+  }
+  .action-btn-view:hover{
+    background:#D6E8F7;
+    color:#003c70;
+  }
+  .action-btn-nav{
+    background:#0058A3;
+    color:#fff;
+  }
+  .action-btn-nav:hover{
+    background:#004078;
+    color:#fff;
+  }
+
+  .note{font-size:11.5px;color:#557;padding:12px 4px 24px;line-height:1.6;}
+
+  /* ---------- markers ---------- */
+  .pin{position:relative;}
+  .pin .dot{
+    width:32px;height:32px;border-radius:50% 50% 50% 0;
+    transform:rotate(-45deg);
+    border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .pin .dot span{transform:rotate(45deg);color:#fff;font-weight:800;font-size:13px;}
+
+  .leaflet-popup-content-wrapper{border-radius:12px;}
+  .pop h3{color:var(--ikea-blue);font-size:15px;margin-bottom:2px;}
+  .pop .en{color:#555;font-size:12.5px;font-weight:600;margin-bottom:6px;}
+  .pop .tag{
+    display:inline-block;color:#fff;font-size:11px;font-weight:700;
+    border-radius:10px;padding:1px 10px;margin-bottom:6px;
+  }
+  .pop .addr{font-size:12.5px;color:#333;line-height:1.6;}
+  .pop a{
+    display:inline-block;margin-top:8px;background:var(--ikea-blue);color:#fff;
+    font-size:12px;font-weight:700;padding:5px 14px;border-radius:16px;text-decoration:none;
+  }
+  .pop a:hover{background:#004a8a;}
+
+  /* ---------- locate control ---------- */
+  .leaflet-control-locate a{
+    background-color:#fff;
+    width:34px;
+    height:34px;
+    display:flex !important;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    color:var(--ikea-blue);
+    transition:background-color .15s, color .15s;
+  }
+  .leaflet-control-locate a:hover{
+    background-color:#EAF3FA;
+    color:#004a8a;
+  }
+  .leaflet-control-locate a.active{
+    background-color:var(--ikea-yellow);
+    color:var(--ikea-blue);
+  }
+  .leaflet-control-locate a.locating{
+    opacity: 0.5;
+    background-color: #EAF3FA;
+    cursor: wait;
+  }
+
+  /* Google Maps 風格的定位藍點與閃爍脈衝光暈 */
+  .gmap-user-loc-wrapper{
+    position:relative;
+    width:28px;
+    height:28px;
+    cursor:grab;
+  }
+  .gmap-user-loc-wrapper:active{
+    cursor:grabbing;
+  }
+  /* Google Maps 閃爍/脈衝光暈 (Pulse halo) */
+  .gmap-pulse-ring{
+    position:absolute;
+    top:50%;
+    left:50%;
+    width:14px;
+    height:14px;
+    border-radius:50%;
+    background:rgba(26, 115, 232, 0.45);
+    transform:translate(-50%, -50%);
+    animation:gmap-pulse 2s infinite cubic-bezier(0.2, 0.8, 0.2, 1);
+    pointer-events:none;
+  }
+  /* Google Maps 核心高對比藍點 */
+  .gmap-core-dot{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+    width:14px;
+    height:14px;
+    background:#1a73e8;
+    border:2.5px solid #ffffff;
+    border-radius:50%;
+    box-shadow:0 1px 4px rgba(0,0,0,0.35);
+    box-sizing:border-box;
+    z-index:2;
+  }
+  @keyframes gmap-pulse{
+    0%{
+      width:14px;
+      height:14px;
+      opacity:0.9;
+    }
+    70%{
+      width:42px;
+      height:42px;
+      opacity:0;
+    }
+    100%{
+      width:42px;
+      height:42px;
+      opacity:0;
+    }
+  }
+
+  /* 點選地圖自訂位置模式與提示列 */
+  .map-pick-mode, .map-pick-mode .leaflet-grab, .map-pick-mode .leaflet-interactive{
+    cursor:crosshair !important;
+  }
+  .map-pick-banner{
+    position:absolute;
+    top:16px;
+    left:50%;
+    transform:translateX(-50%);
+    background:#0058A3;
+    color:#fff;
+    padding:8px 18px;
+    border-radius:24px;
+    font-size:13.5px;
+    font-weight:700;
+    box-shadow:0 4px 16px rgba(0,0,0,0.3);
+    z-index:1001;
+    display:none;
+    align-items:center;
+    gap:12px;
+    user-select:none;
+  }
+  .map-pick-banner.show{
+    display:flex;
+  }
+  .map-pick-banner button{
+    background:rgba(255,255,255,0.22);
+    border:1px solid rgba(255,255,255,0.7);
+    color:#fff;
+    padding:4px 12px;
+    border-radius:14px;
+    font-size:12px;
+    font-weight:700;
+    cursor:pointer;
+    transition:background .15s;
+  }
+  .map-pick-banner button:hover{
+    background:rgba(255,255,255,0.4);
+  }
+
+  /* ================= IKEA SKAPA 設計規範對齊 =================
+     數值取自 ikea.com.hk 官網實際使用的 SKAPA 樣式（main.css / buttons.css）：
+     primary #111（hover #333）、emphasised #0058A3（hover #004F93、按下 #003E72）、
+     secondary 白底 + #484848 框線、停用 #DFDFDF、圓角 10rem（膠囊形）
+     間距：4 / 8 / 12 / 16 / 24 */
+  :root{
+    --skapa-text:#111111;
+    --skapa-text-2:#484848;
+    --skapa-text-3:#767676;
+    --skapa-border:#DFDFDF;
+    --skapa-border-strong:#484848;
+    --skapa-neutral:#F5F5F5;
+    --skapa-focus:#0058A3;
+    --skapa-emph-hover:#004F93;
+    --skapa-emph-active:#003E72;
+  }
+  body{color:var(--skapa-text);}
+  button:focus-visible, a:focus-visible, input:focus-visible{
+    outline:2px solid var(--skapa-focus);outline-offset:2px;
+  }
+
+  header{box-shadow:none;border-bottom:1px solid var(--skapa-border);}
+  header h1{color:var(--skapa-text);font-weight:700;}
+  header .sub{color:var(--skapa-text-2);}
+  .tab{
+    min-height:40px;padding:0 20px;border-radius:64px;
+    border:1px solid var(--skapa-border-strong);color:var(--skapa-text);
+    font-size:14px;font-weight:700;background:#fff;white-space:nowrap;
+  }
+  .tab:hover{background:var(--skapa-neutral);}
+  .tab.active{background:var(--ikea-blue);border-color:var(--ikea-blue);color:#fff;}
+
+  .toggle-aside-btn{
+    min-height:40px;padding:0 16px;border-radius:64px;
+    border:1px solid var(--skapa-border-strong);color:var(--skapa-text);
+    font-size:14px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.12);
+  }
+  .toggle-aside-btn:hover{background:var(--skapa-neutral);transform:none;}
+  .wrap.aside-collapsed .toggle-aside-btn{background:var(--ikea-blue);border-color:var(--ikea-blue);color:#fff;}
+
+  aside{background:var(--skapa-neutral);padding:16px;box-shadow:none;border-left:1px solid var(--skapa-border);}
+  .aside-sticky-header{
+    background:var(--skapa-neutral);
+    top:-16px;margin:-16px -16px 8px -16px;padding:16px 16px 8px;
+    border-bottom:1px solid var(--skapa-border);
+  }
+
+  .search{
+    min-height:44px;padding:0 16px;margin-bottom:12px;border-radius:64px;
+    background:#fff;border:1px solid var(--skapa-border);box-shadow:none;
+  }
+  .search:focus-within{border-color:var(--skapa-text);}
+  .search input{font-size:14px;color:var(--skapa-text);}
+  .search .search-icon{color:var(--skapa-text-2);}
+
+  /* 桌面版：篩選標籤換行全部顯示（滑鼠無法左右滑動，捲動式會把一半的篩選藏起來） */
+  .filter-chips{
+    flex-wrap:wrap;gap:8px;overflow:visible;padding-bottom:4px;
+    -webkit-mask-image:none;mask-image:none;
+  }
+  .chip{
+    min-height:32px;padding:0 12px;border-radius:64px;
+    border:1px solid var(--skapa-border);background:#fff;box-shadow:none;
+    font-size:14px;font-weight:700;color:var(--skapa-text);gap:6px;white-space:nowrap;
+  }
+  .chip:hover{border-color:var(--skapa-text);background:#fff;color:var(--skapa-text);}
+  .chip.active,
+  .chip.active[style]{background:var(--skapa-text) !important;border-color:var(--skapa-text) !important;color:#fff;box-shadow:none;}
+  .chip .chip-count{background:var(--skapa-neutral);color:var(--skapa-text-2);font-size:12px;font-weight:700;}
+  .chip.active .chip-count{background:rgba(255,255,255,.2);color:#fff;}
+  .chip .cat-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .chip.sort-nearest{border-color:var(--skapa-border);color:var(--skapa-text);}
+  .chip.sort-nearest.active{background:var(--skapa-text);border-color:var(--skapa-text);color:#fff;box-shadow:none;}
+
+  .list-summary-bar{font-size:14px;color:var(--skapa-text-2);font-weight:400;padding:8px 0 12px;gap:8px;flex-wrap:wrap;}
+  .list-summary-bar b{color:var(--skapa-text);}
+
+  .store{
+    border-radius:8px;padding:16px;margin-bottom:8px;gap:12px;
+    border:1px solid var(--skapa-border);box-shadow:none;
+  }
+  .store:hover{transform:none;box-shadow:none;border-color:var(--skapa-border-strong);}
+  .store.selected{background:#fff;border:2px solid var(--ikea-blue);padding:15px;box-shadow:none;}
+  .badge{width:32px;height:32px;font-size:14px;font-weight:700;margin-top:0;box-shadow:none;}
+  .store-top-row{margin-bottom:8px;align-items:flex-start;}
+  .store-tag, .locker-badge, .closed-badge, .distance-badge{
+    font-size:12px;font-weight:700;padding:2px 8px;border-radius:4px;line-height:1.5;
+  }
+  .store-tag{background:var(--skapa-neutral) !important;color:var(--skapa-text);}
+  .locker-badge{background:var(--skapa-neutral);color:var(--skapa-text);border:none;}
+
+  /* 地區切換：SKAPA 分段選擇器 */
+  .tabs{gap:0;padding:4px;background:var(--skapa-neutral);border-radius:10rem;}
+  .tabs .tab{border:none;background:transparent;min-height:36px;}
+  .tabs .tab:hover{background:var(--skapa-border);}
+  .tabs .tab.active{background:var(--skapa-text);color:#fff;}
+  .tabs .tab.active:hover{background:#333;}
+  .distance-badge{background:transparent;border:none;color:var(--skapa-text);padding:2px 0;white-space:nowrap;}
+  .store .name{font-size:16px;font-weight:700;color:var(--skapa-text);line-height:1.4;}
+  .store .name .en{font-size:14px;font-weight:400;color:var(--skapa-text-2);}
+  .store .addr{font-size:14px;color:var(--skapa-text-2);margin-top:4px;line-height:1.5;}
+
+  .store-actions{gap:8px;margin-top:12px;flex-wrap:wrap;}
+  .action-btn-view, .action-btn-nav{
+    min-height:32px;padding:0 16px;border-radius:64px;
+    font-size:14px;font-weight:700;gap:6px;white-space:nowrap;
+  }
+  .action-btn-view{background:#fff;color:var(--skapa-text);border:1px solid var(--skapa-border-strong);}
+  .action-btn-view:hover{background:var(--skapa-neutral);color:var(--skapa-text);border-color:var(--skapa-text);}
+  .action-btn-nav{background:var(--ikea-blue);color:#fff;border:1px solid var(--ikea-blue);}
+  .action-btn-nav:hover{background:var(--skapa-emph-hover);border-color:var(--skapa-emph-hover);}
+  .action-btn-nav:active{background:var(--skapa-emph-active);}
+  .tab.active:hover{background:var(--skapa-emph-hover);}
+  .chip.active:hover{background:#333 !important;}
+
+  .note{font-size:12px;color:var(--skapa-text-3);padding:16px 0 24px;}
+
+  /* 地圖控制項統一成 SKAPA 40px 圖示按鈕 */
+  .leaflet-bar a, .leaflet-control-locate a{width:40px !important;height:40px !important;line-height:40px !important;}
+  .leaflet-bar{border:1px solid var(--skapa-border) !important;box-shadow:0 2px 8px rgba(0,0,0,.12) !important;border-radius:8px !important;overflow:hidden;}
+
+  /* ---------- 我的位置資訊卡（SKAPA 卡片） ---------- */
+  .uloc-popup .leaflet-popup-content-wrapper{border-radius:8px;padding:0;box-shadow:0 4px 16px rgba(0,0,0,.18);}
+  .uloc-popup .leaflet-popup-content{margin:0;}
+  .uloc{width:272px;max-width:calc(100vw - 64px);padding:16px;color:var(--skapa-text);font-size:14px;line-height:1.5;}
+  .uloc-head{display:flex;gap:12px;align-items:flex-start;padding-right:16px;}
+  .uloc-head-icon{
+    width:36px;height:36px;border-radius:50%;flex-shrink:0;
+    background:#E6F0F8;color:var(--ikea-blue);display:flex;align-items:center;justify-content:center;
+  }
+  .uloc-head-icon .ui-icon{width:18px;height:18px;}
+  .uloc-title{font-size:16px;font-weight:700;}
+  .uloc-source{font-size:14px;font-weight:700;color:var(--skapa-text-2);}
+  .uloc-source-detail{display:block;font-size:12px;font-weight:400;color:var(--skapa-text-3);}
+  .uloc-notice{
+    display:flex;gap:8px;align-items:flex-start;margin-top:12px;padding:8px 12px;
+    background:#FFF5E0;border-left:4px solid #F2A900;border-radius:4px;
+    font-size:12px;color:var(--skapa-text);
+  }
+  .uloc-notice .ui-icon{flex-shrink:0;margin-top:2px;}
+  .uloc-section{margin-top:16px;padding-top:16px;border-top:1px solid var(--skapa-border);}
+  .uloc-label{font-size:12px;color:var(--skapa-text-3);margin-bottom:8px;}
+  .uloc-nearest{display:flex;align-items:center;gap:8px;}
+  .uloc-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .uloc-nearest-text{flex:1;min-width:0;}
+  .uloc-nearest-name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .uloc-nearest-dist{font-size:12px;color:var(--skapa-text-2);}
+  .uloc-actions{display:flex;flex-direction:column;gap:8px;margin-top:16px;}
+  .uloc-btn{
+    min-height:40px;padding:0 16px;border-radius:10rem;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;
+    font-family:inherit;transition:background .15s;
+  }
+  .uloc-btn--xs{min-height:32px;padding:0 12px;flex-shrink:0;}
+  .uloc-btn--emph{background:var(--ikea-blue);color:#fff !important;border:1px solid var(--ikea-blue);}
+  .uloc-btn--emph:hover{background:var(--skapa-emph-hover);}
+  .uloc-btn--secondary{background:#fff;color:var(--skapa-text);border:1px solid var(--skapa-border-strong);}
+  .uloc-btn--secondary:hover{background:var(--skapa-neutral);}
+  .uloc-foot{
+    display:flex;justify-content:space-between;align-items:center;gap:8px;
+    margin-top:12px;font-size:12px;color:var(--skapa-text-3);
+  }
+  .uloc-link{
+    background:none;border:none;padding:4px 0;cursor:pointer;font-family:inherit;
+    font-size:12px;font-weight:700;color:var(--skapa-text);text-decoration:underline;
+  }
+  .uloc-link:hover{color:#CC0008;}
+
+  /* ---------- 交通方式切換（SKAPA 分段選擇器） ---------- */
+  .travel-modes{margin-top:8px;}
+  .travel-seg{display:flex;padding:4px;background:#fff;border:1px solid var(--skapa-border);border-radius:10rem;}
+  .travel-seg-btn{
+    flex:1;min-height:32px;padding:0 6px;border:none;border-radius:10rem;background:transparent;
+    display:inline-flex;align-items:center;justify-content:center;gap:4px;
+    font-family:inherit;font-size:13px;font-weight:700;color:var(--skapa-text-2);cursor:pointer;white-space:nowrap;
+  }
+  .travel-seg-btn:hover{background:var(--skapa-neutral);color:var(--skapa-text);}
+  .travel-seg-btn.active{background:var(--skapa-text);color:#fff;}
+  .travel-hint{margin-top:6px;font-size:12px;color:var(--skapa-text-3);line-height:1.5;}
+  .store-top-row{flex-wrap:wrap;}
+  .distance-badge{white-space:normal !important;text-align:right;}
+  .distance-badge .ui-icon{flex-shrink:0;}
+
+  /* ---------- 路線資訊卡 ---------- */
+  .route-panel{
+    position:absolute;top:16px;left:72px;width:340px;max-height:calc(100% - 32px);overflow:auto;
+    background:#fff;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);
+    padding:16px;z-index:1001;color:var(--skapa-text);font-size:14px;line-height:1.5;
+  }
+  .route-panel[hidden]{display:none;}
+  .rt-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px;}
+  .rt-label{font-size:12px;color:var(--skapa-text-3);}
+  .rt-title{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;}
+  .rt-close{
+    width:36px;height:36px;border-radius:50%;border:none;background:var(--skapa-neutral);flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--skapa-text);
+  }
+  .rt-close:hover{background:var(--skapa-border);}
+  .rt-summary{display:flex;align-items:baseline;gap:8px;margin-top:16px;}
+  .rt-time{font-size:24px;font-weight:700;}
+  .rt-dist{font-size:14px;color:var(--skapa-text-2);}
+  .rt-msg{margin-top:16px;color:var(--skapa-text-2);}
+  .rt-actions{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+  .rt-chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px;}
+  .rt-chip{
+    display:inline-flex;align-items:center;gap:4px;min-height:26px;padding:0 8px;border-radius:4px;
+    background:var(--skapa-neutral);font-size:12px;font-weight:700;
+  }
+  .rt-chip--line .ui-icon{stroke:currentColor;}
+  .rt-sep{color:var(--skapa-text-3);font-weight:700;}
+  .rt-details{list-style:none;margin:12px 0 0;padding:0;font-size:12px;color:var(--skapa-text-2);}
+  .rt-details li{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;}
+  .rt-details .rt-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+  .rt-details b{color:var(--skapa-text);}
+  .rt-nav{width:100%;margin-top:16px;}
+  .pop-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .pop-actions .uloc-btn{text-decoration:none;}
+
+  /* ---------- 清單底部說明（依地區切換） ---------- */
+  .note{font-size:12px;color:var(--skapa-text-2);line-height:1.6;}
+  .note-title{font-size:12px;font-weight:700;color:var(--skapa-text);margin-bottom:4px;}
+  .note ul{padding-left:18px;margin:0 0 8px;}
+  .note li{margin-bottom:4px;}
+  .note b{color:var(--skapa-text);}
+  .note a{color:var(--skapa-text);}
+
+  /* 手機版拉出式底部面板的把手（僅在手機版顯示） */
+  .sheet-grip{display:none;}
+
+  /* 篩選中提示紅點（分類篩選或「離我最近」排序啟用時亮起） */
+  .toggle-aside-btn.has-filters::after{
+    content:"";
+    position:absolute;
+    top:2px;right:4px;
+    width:9px;height:9px;border-radius:50%;
+    background:#F26A1B;
+    border:2px solid #fff;
+  }
+
+  /* 全螢幕遮罩：面板拉出時顯示於地圖之上，點擊可收合面板 */
+  .sheet-backdrop{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,.35);
+    opacity:0;pointer-events:none;
+    transition:opacity .25s ease;
+    z-index:1390;
+  }
+
+  @media (max-width:820px){
+    header{padding:8px 10px;gap:8px;}
+    .logo{height:24px;}
+    header h1{font-size:13px;line-height:1.3;}
+    header .sub{display:none;}
+    .tabs{gap:6px;}
+    .tab{padding:5px 10px;font-size:11.5px;border-radius:18px;}
+
+    .wrap{flex-direction:column;}
+    #map{height:100%;flex:1;}
+
+    /* 門市列表／篩選改為由下方滑出的漢堡面板，預設收起、地圖全螢幕顯示 */
+    aside{
+      position:fixed;
+      left:0;right:0;bottom:0;
+      width:100%;
+      height:80vh;max-height:80vh;
+      border-radius:18px 18px 0 0;
+      box-shadow:0 -6px 24px rgba(0,0,0,.28);
+      transform:translateY(100%);
+      transition:transform .3s ease;
+      opacity:1 !important;pointer-events:auto !important;
+      z-index:1400;
+    }
+    .wrap.mobile-sheet-open aside{transform:translateY(0);}
+    .wrap.mobile-sheet-open .sheet-backdrop{opacity:1;pointer-events:auto;}
+
+    .sheet-grip{
+      display:block;
+      width:40px;height:5px;border-radius:3px;
+      background:#c9d4dd;
+      margin:0 auto 10px;
+    }
+
+    /* 漢堡按鈕：固定於畫面右下角，不隨面板開合位移，永遠好按 */
+    .toggle-aside-btn{
+      position:fixed;
+      top:auto !important;
+      bottom:18px;
+      right:16px !important;
+      z-index:1410;
+      border-radius:26px;
+      padding:11px 18px;
+      box-shadow:0 4px 14px rgba(0,0,0,.32);
+    }
+    .wrap.mobile-sheet-open .toggle-aside-btn{
+      background:var(--ikea-blue);color:#fff;
+    }
+
+    /* 手機版：篩選標籤改單列左右滑動（觸控可滑），右側淡出提示還有更多 */
+    .filter-chips{
+      flex-wrap:nowrap;overflow-x:auto;
+      -webkit-mask-image:linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
+      mask-image:linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
+      padding-right:24px;
+    }
+    .chip{min-height:40px;}
+    aside{border-left:none;padding-top:10px;}
+    .aside-sticky-header{border-bottom:none;margin-top:0;top:-10px;padding-top:8px;}
+    .tab{min-height:32px;}
+    .toggle-aside-btn{min-height:44px;bottom:calc(18px + env(safe-area-inset-bottom));}
+
+    /* 左下角定位／縮放按鈕：與右下角「門市列表」按鈕底部對齊，並避開 iPhone 底部手勢列 */
+    .leaflet-bottom.leaflet-left{bottom:calc(18px + env(safe-area-inset-bottom));}
+    .leaflet-bottom.leaflet-left .leaflet-control{margin-bottom:0;margin-top:10px;margin-left:16px;}
+    .leaflet-bottom.leaflet-right{bottom:env(safe-area-inset-bottom);}
+    aside{padding-bottom:calc(16px + env(safe-area-inset-bottom));}
+
+    /* 路線資訊卡在手機版固定於畫面底部，開啟時暫時隱藏會被蓋住的按鈕 */
+    .route-panel{
+      position:fixed;top:auto;left:0;right:0;bottom:0;width:auto;max-height:60dvh;
+      border-radius:16px 16px 0 0;box-shadow:0 -4px 20px rgba(0,0,0,.22);z-index:1405;
+      padding-bottom:calc(16px + env(safe-area-inset-bottom));
+    }
+    .wrap.route-open .toggle-aside-btn,
+    .wrap.route-open .leaflet-bottom.leaflet-left{display:none;}
+  }
+
+  @media (max-width:420px){
+    header h1{font-size:12px;}
+    .tab{padding:5px 8px;font-size:11px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <img class="logo" src="https://upload.wikimedia.org/wikipedia/commons/c/c5/Ikea_logo.svg" alt="IKEA">
+  <div>
+    <h1>台灣・香港・澳門 門市及提貨點地圖</h1>
+    <div class="sub">互動式門市及提貨據點查詢 ｜ 底圖採用 Google Maps</div>
+  </div>
+  <div class="tabs">
+    <button class="tab" data-region="tw">台灣</button>
+    <button class="tab active" data-region="hk">香港・澳門</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="map"></div>
+  <div id="mapPickBanner" class="map-pick-banner">
+    <span style="display:inline-flex;align-items:center;gap:6px;">
+      <svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+      請在地圖上點擊您的真實位置
+    </span>
+    <button onclick="exitMapPickMode()" style="display:inline-flex;align-items:center;gap:4px;">
+      <svg class="ui-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      取消
+    </button>
+  </div>
+  <button id="toggleAsideBtn" class="toggle-aside-btn" title="收合右側門市列表" onclick="toggleAside()">
+    <span class="toggle-icon"><svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+    <span>收合面板</span>
+  </button>
+  <div class="sheet-backdrop" onclick="toggleAside()"></div>
+  <section id="routePanel" class="route-panel" aria-live="polite" hidden></section>
+  <aside>
+    <div class="sheet-grip"></div>
+    <div class="aside-sticky-header">
+      <div class="search">
+        <span class="search-icon">
+          <svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </span>
+        <input id="q" type="text" placeholder="搜尋門市名稱、提貨站或地址…">
+        <button id="clearSearchBtn" class="clear-search-btn" title="清除搜尋" onclick="clearSearch()" style="display:none;">
+          <svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div id="filterChips" class="filter-chips"></div>
+      <div id="travelModes" class="travel-modes" hidden></div>
+    </div>
+    <div id="listCountHeader" class="list-summary-bar"></div>
+    <div id="list"></div>
+    <div class="note" id="regionNote"></div>
+  </aside>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const CATS = {
+  store      : {label:"分店",                         color:"#0058A3"},
+  city       : {label:"訂購取貨中心",                 color:"#F26A1B"},
+  cs         : {label:"社區服務據點（規劃及訂購點）",   color:"#F26A1B"},
+  popup      : {label:"快閃店",                       color:"#E75294"},
+  popuphk    : {label:"期間限定店（Popup Store）",       color:"#E75294"},
+  marketplace: {label:"Market Place 提貨站",          color:"#008C46"},
+  "3hreesixty":{label:"3hreesixty 提貨站",            color:"#7B1FA2"},
+  wellcome   : {label:"惠康提貨站",                    color:"#D9232A"},
+};
+
+const ICONS = {
+  search: `<svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
+  close: `<svg class="ui-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
+  nearMe: `<svg class="ui-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>`,
+  pin: `<svg class="ui-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`,
+  navigate: `<svg class="ui-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`,
+  chevronRight: `<svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`,
+  chevronLeft: `<svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>`,
+  car: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14v-5l-2-5H7l-2 5v5z"></path><line x1="5" y1="12" x2="19" y2="12"></line><circle cx="7.5" cy="17.5" r="1.5"></circle><circle cx="16.5" cy="17.5" r="1.5"></circle></svg>`,
+  transit: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="14" rx="3"></rect><line x1="5" y1="11" x2="19" y2="11"></line><circle cx="8.5" cy="14" r="1"></circle><circle cx="15.5" cy="14" r="1"></circle><line x1="8" y1="17" x2="6" y2="21"></line><line x1="16" y1="17" x2="18" y2="21"></line></svg>`,
+  walk: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="2"></circle><path d="M10 21l2-6 3 3v3"></path><path d="M8 11l3-3 3 2 3 1"></path><path d="M11 8l-1 7"></path></svg>`,
+  route: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2.5"></circle><circle cx="18" cy="5" r="2.5"></circle><path d="M8.5 19H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.5"></path></svg>`,
+  hamburger: `<svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>`,
+  listIcon: `<svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>`,
+  trash: `<svg class="ui-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
+  refresh: `<svg class="ui-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>`,
+  target: `<svg class="ui-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>`,
+  gps: `<svg class="ui-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path></svg>`,
+  globe: `<svg class="ui-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`,
+  warning: `<svg class="ui-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#d9232a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
+  locker: `<svg class="ui-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><circle cx="7.5" cy="6" r="1" fill="currentColor"/><circle cx="7.5" cy="12" r="1" fill="currentColor"/><circle cx="7.5" cy="18" r="1" fill="currentColor"/><circle cx="16.5" cy="6" r="1" fill="currentColor"/><circle cx="16.5" cy="12" r="1" fill="currentColor"/><circle cx="16.5" cy="18" r="1" fill="currentColor"/></svg>`
+};
+
+const DATA = {
+  tw: {
+    center:[23.75,120.95], zoom:8,
+    cats:["store","city","popup"],
+    stores:[
+      {n:1, cat:"store", zh:"內湖店", en:"Neihu Store",  addr:"台北市內湖區舊宗路一段128號", lat:25.0609683, lon:121.5780389, cid:"1496312463967873712"},
+      {n:2, cat:"store", zh:"新莊店", en:"Xinzhuang Store", addr:"新北市新莊區中正路1號", lat:25.0413322, lon:121.4649748, cid:"12364751227325972718"},
+      {n:3, cat:"store", zh:"新店店", en:"Xindian Store", addr:"新北市新店區中央路159號4樓", lat:24.9726619, lon:121.5300492, cid:"16095158368651679343"},
+      {n:4, cat:"store", zh:"桃園店", en:"Taoyuan Store", addr:"桃園市中壢區青埔里高鐵站前東路一段1號", lat:25.0133222, lon:121.2171759, cid:"3847807742945177865"},
+      {n:5, cat:"store", zh:"台中店", en:"Taichung Store", addr:"台中市南屯區向上路二段168號", lat:24.1473199, lon:120.6432402, cid:"8265981256988590935"},
+      {n:6, cat:"store", zh:"高雄店", en:"Kaohsiung Store", addr:"高雄市前鎮區中華五路1201號", lat:22.6058468, lon:120.3044565, cid:"2012707749411056164"},
+      {n:7, cat:"store", zh:"台北城市店-小巨蛋", en:"Taipei City Shop Arena", addr:"台北市松山區敦化北路100號B1", lat:25.0523441, lon:121.5484703, cid:"9913186858208929722"},
+      {n:8, cat:"store", zh:"嘉義城市店", en:"Chiayi City Shop", addr:"嘉義市西區博愛路二段281號", lat:23.4781873, lon:120.4380570, cid:"1222016163975114731"},
+      {n:9, cat:"city", zh:"新竹訂購取貨中心", en:"Hsinchu Planning and Pick-up Point", addr:"新竹縣竹北市中正東路98號", lat:24.8352712, lon:121.0173716, cid:"1666151064483011416"},
+      {n:10, cat:"popup", zh:"宜蘭快閃店", en:"Yilan Pop-up Store", addr:"宜蘭縣宜蘭市民權路二段38巷6號（新月廣場1樓）", lat:24.7540710, lon:121.7512474, cid:"12672748657440181888"},
+      {n:11, cat:"popup", zh:"天母快閃店", en:"Tianmu Pop-up Store", addr:"台北市士林區德行西路47號2樓（家樂福天母店2F）", lat:25.1055268, lon:121.5228549, cid:"13096964935841407705", closed:"已結束"},
+    ]
+  },
+  hk: {
+    center:[22.335,114.05], zoom:11,
+    cats:["store","cs","popuphk","marketplace","3hreesixty","wellcome"],
+    stores:[
+      // 1. 分店 (共 5 處：香港 4 處 + 澳門 1 處)
+      {n:1, cat:"store", zh:"銅鑼灣分店", en:"Causeway Bay Store", addr:"香港銅鑼灣告士打道310號柏寧酒店地庫", lat:22.2807635, lon:114.1863215, cid:"4340842157881024334"},
+      {n:2, cat:"store", zh:"九龍灣分店", en:"Kowloon Bay Store", addr:"九龍灣宏照道38號MegaBox 4樓", lat:22.3196037, lon:114.2085155, cid:"2316816596803810210", locker:"MegaBox 4樓 FiKET咖啡廊旁（24小時）"},
+      {n:3, cat:"store", zh:"沙田分店", en:"Shatin Store", addr:"沙田鄉事會路138號HomeSquare L6", lat:22.3855358, lon:114.1877806, cid:"14717193456579229411"},
+      {n:4, cat:"store", zh:"荃灣分店", en:"Tsuen Wan Store", addr:"荃灣青山公路388號中染大廈8咪半 3樓", lat:22.3753302, lon:114.1130687, cid:"15933576463128277314"},
+      {n:5, cat:"store", zh:"澳門分店", en:"Macau Store", addr:"澳門氹仔廣東大馬路515號星皓廣場1樓101及2樓201號舖", lat:22.1607463, lon:113.5533708, cid:"9111055129926894875"},
+
+      // 2. 社區服務據點（規劃及訂購點，共 5 處）
+      {n:6, cat:"cs", zh:"尖沙咀規劃及訂購點", en:"Tsim Sha Tsui Plan and Order Point", addr:"尖沙咀河內道18號K11購物藝術館B2層B204-B210舖", lat:22.2972778, lon:114.1733357, cid:"9346504872689832686", locker:"K11購物藝術館B2層 (地鐵站N3出口)（07:30-23:00）"},
+      {n:7, cat:"cs", zh:"太古規劃及訂購點", en:"Tai Koo Plan and Order Point", addr:"鰂魚涌太古城道18號太古城中心一樓104及105店", lat:22.2856337, lon:114.2175951, cid:"8951510564594191777", locker:"太古城中心一樓104及105店（11:00-21:00）"},
+      {n:8, cat:"cs", zh:"坑口規劃及訂購點", en:"Hang Hau Plan and Order Point", addr:"將軍澳重華路8號東港城2樓221號舖", lat:22.3163658, lon:114.2652397, cid:"10378602320833438578", locker:"東港城2樓221號舖（07:00-22:00）"},
+      {n:9, cat:"cs", zh:"大埔規劃及訂購點", en:"Tai Po Plan and Order Point", addr:"新界大埔超級城B區2樓238A號鋪", lat:22.4517464, lon:114.1699792, cid:"18293259922146024361", locker:"大埔超級城B區2樓238A號鋪店旁（11:00-21:00）"},
+      {n:10, cat:"cs", zh:"西灣河規劃及取貨據點", en:"Sai Wan Ho Pick-up Point (已結業)", addr:"西灣河耀興道55號興東商場地下11號舖（附註：實體已於2025年結業，特價部併入九龍灣店）", lat:22.2807200, lon:114.2200660, cid:"16661852414641302578", closed:"已結業"},
+
+      // 3. 期間限定店（Popup Store，共 8 處）
+      {n:11, cat:"popuphk", zh:"黃竹坑期間限定店", en:"Wong Chuk Hang Popup", addr:"黃竹坑香葉道11號THE SOUTHSIDE L1樓P1-B舖", lat:22.2473891, lon:114.1675297, cid:"5090367853110290929"},
+      {n:12, cat:"popuphk", zh:"馬鞍山期間限定店", en:"Ma On Shan Popup", addr:"馬鞍山鞍祿街18號新港城中心MOSTown", lat:22.4225776, lon:114.2320374, cid:"11771906069941588579"},
+      {n:13, cat:"popuphk", zh:"上水期間限定店", en:"Sheung Shui Popup", addr:"上水智昌路3號上水中心", lat:22.5008858, lon:114.1299577, cid:"11497979899263799895"},
+      {n:14, cat:"popuphk", zh:"如心廣場期間限定店", en:"Nina Popup", addr:"荃灣楊屋道8號如心廣場一期", lat:22.3687480, lon:114.1129900, cid:"4043452325659487410"},
+      {n:15, cat:"popuphk", zh:"青衣期間限定店", en:"Tsing Yi Popup", addr:"青衣青敬路31-33號青衣城1期", lat:22.3600644, lon:114.1069973, cid:"12052529587826777379"},
+      {n:16, cat:"popuphk", zh:"屯門市廣場期間限定店", en:"Tuen Mun Town Popup", addr:"屯門屯順街1號屯門市廣場2期3樓2328號舖Kiosk", lat:22.3930370, lon:113.9777275, cid:"1394087244577275813"},
+      {n:17, cat:"popuphk", zh:"啟德期間限定店", en:"Kai Tak AIRSIDE Popup", addr:"啟德協調道2號AIRSIDE 1樓109及113號舖", lat:22.3313220, lon:114.1981420, cid:"1062125434480119345"},
+      {n:18, cat:"popuphk", zh:"天水圍期間限定店", en:"Tin Shui Wai Popup", addr:"新界天水圍天恩路18號 +WOO 嘉湖二期 G/F 中庭", lat:22.4570560, lon:114.0039170},
+
+      // 4. Market Place 提貨站 (共 6 處)
+      {n:19, cat:"marketplace", zh:"中環盈置大廈提貨站", en:"Central Nexxus Building Pick-up", addr:"香港中環德輔道中77號盈置大廈地庫全層 (Market Place)", lat:22.2842116, lon:114.1564597},
+      {n:20, cat:"marketplace", zh:"渣甸山白建時道提貨站", en:"Jardine's Lookout Pick-up", addr:"香港渣甸山白建時道5號1樓 (Market Place)", lat:22.2706328, lon:114.1916743},
+      {n:21, cat:"marketplace", zh:"奧海城2期提貨站", en:"Olympian City 2 Pick-up (Close to you)", addr:"九龍大角咀西九龍海庭道18號奧海城2期地下G1及G10號鋪 (Market Place / Close to you)", lat:22.3182000, lon:114.1595000, cid:"11773809708404478753", locker:"奧海城2期地下G1及G10號鋪 Market Place 內（08:00-22:30）"},
+      {n:22, cat:"marketplace", zh:"將軍澳中心提貨站", en:"Park Central Pick-up", addr:"將軍澳唐德街9號將軍澳中心地庫1樓B10A號鋪 (Market Place)", lat:22.3070018, lon:114.2571932},
+      {n:23, cat:"marketplace", zh:"大圍圍方提貨站", en:"The Wai Pick-up", addr:"新界沙田車公廟路18號圍方商場4樓413-415號舖 (Market Place)", lat:22.3732991, lon:114.1801102},
+      {n:24, cat:"marketplace", zh:"愉景灣提貨站", en:"Discovery Bay Pick-up (Close to you)", addr:"大嶼山愉景灣海澄湖畔路92號愉景北商場地下G11號舖 (Market Place / Close to you)", lat:22.3076200, lon:114.0168700, cid:"14336745112252413194", locker:"愉景北商場地下G11號舖 Market Place 內（11:00-20:00）"},
+
+      // 5. 3hreesixty 提貨站 (共 1 處)
+      {n:25, cat:"3hreesixty", zh:"赤柱廣場提貨站", en:"Stanley Plaza Pick-up (3hreesixty)", addr:"香港赤柱佳美道23及33號馬坑邨赤柱廣場2樓203號鋪 (3hreesixty)", lat:22.2192500, lon:114.2098500},
+
+      // 6. 惠康提貨站 (共 12 處)
+      {n:26, cat:"wellcome", zh:"西環寶翠園提貨站", en:"The Westwood Pick-up", addr:"香港卑路乍街8號西寶城3樓 (惠康超級市場)", lat:22.2857460, lon:114.1331869},
+      {n:27, cat:"wellcome", zh:"北角健威花園提貨站", en:"Fitfort Pick-up", addr:"香港北角英皇道560號健威商場高層U14室 (惠康超級市場)", lat:22.2915435, lon:114.2038527},
+      {n:28, cat:"wellcome", zh:"美孚新邨2提貨站", en:"Mei Foo Sun Chuen Pick-up", addr:"九龍美孚新邨百老匯街69-71號地下 (惠康超級市場)", lat:22.3357979, lon:114.1399613},
+      {n:29, cat:"wellcome", zh:"紅磡提貨站", en:"Hung Hom Pick-up", addr:"九龍紅磡湖光街1-7號聯盛大廈地下10C-10G (惠康超級市場)", lat:22.3059896, lon:114.1863443},
+      {n:30, cat:"wellcome", zh:"鯉魚門提貨站", en:"Lei Yue Mun Pick-up", addr:"九龍油塘鯉魚門道鯉魚門廣場1樓123及124舖 (惠康超級市場)", lat:22.2963310, lon:114.2394676},
+      {n:31, cat:"wellcome", zh:"上水名都提貨站", en:"Sheung Shui Town Centre Pick-up", addr:"新界上水名都中心第一層3, 15至16, 18, 20至21號舖 (惠康超級市場)", lat:22.5022290, lon:114.1284227},
+      {n:32, cat:"wellcome", zh:"屯門安定提貨站", en:"On Ting Estate Pick-up", addr:"新界屯門鄉事會路2A安定邨酒樓大厦3樓M301（愛定商場） (惠康超級市場)", lat:22.3872107, lon:113.9769265},
+      {n:33, cat:"wellcome", zh:"元朗朗屏提貨站", en:"Long Ping Pick-up", addr:"新界元朗朗屏邨商場2樓203舖 (惠康超級市場)", lat:22.4503749, lon:114.0237228},
+      {n:34, cat:"wellcome", zh:"天水圍天澤提貨站", en:"Tin Chak Pick-up", addr:"新界天水圍天澤商場2樓204號舖 (惠康超級市場)", lat:22.4684555, lon:113.9987441},
+      {n:35, cat:"wellcome", zh:"馬鞍山恒安提貨站", en:"Hang On Pick-up", addr:"新界馬鞍山恒安村恆安商場2號227-231舖 (惠康超級市場)", lat:22.4164240, lon:114.2285657},
+      {n:36, cat:"wellcome", zh:"東涌逸東提貨站", en:"Yat Tung Pick-up", addr:"大嶼山東涌逸東商場1樓110舖 (惠康超級市場)", lat:22.2821962, lon:113.9362642},
+      {n:37, cat:"wellcome", zh:"梅窩銀礦灣提貨站", en:"Silvermine Bay Pick-up", addr:"大嶼山梅窩銀灣道2號家樂閣地下 (惠康超級市場)", lat:22.2640279, lon:114.0011965},
+    ]
+  }
+};
+
+/* ---------- map ---------- */
+const map = L.map("map", {
+  zoomControl: false,
+  maxZoom: 21,
+  minZoom: 3
+});
+L.control.zoom({position:"bottomleft"}).addTo(map);
+
+// 直接採用 Google Maps 圖層，徹底解決 OpenStreetMap 403 Access Blocked 問題
+// 設定 maxNativeZoom: 解決放大地圖後圖層消失或變灰白的問題（當放大超過原生層級時，Leaflet 自動進行平滑插值放大，保證地圖永不消失）
+const googleRoads = L.tileLayer("https://mt{s}.google.com/vt/lyrs=m&hl=zh-TW&x={x}&y={y}&z={z}", {
+  subdomains: ['0','1','2','3'],
+  maxZoom: 21,
+  maxNativeZoom: 19,
+  attribution: '&copy; <a href="https://maps.google.com" target="_blank" rel="noopener">Google Maps</a>'
+});
+
+const googleHybrid = L.tileLayer("https://mt{s}.google.com/vt/lyrs=y&hl=zh-TW&x={x}&y={y}&z={z}", {
+  subdomains: ['0','1','2','3'],
+  maxZoom: 21,
+  maxNativeZoom: 19,
+  attribution: '&copy; <a href="https://maps.google.com" target="_blank" rel="noopener">Google Maps 衛星混合</a>'
+});
+
+const googleTerrain = L.tileLayer("https://mt{s}.google.com/vt/lyrs=p&hl=zh-TW&x={x}&y={y}&z={z}", {
+  subdomains: ['0','1','2','3'],
+  maxZoom: 21,
+  maxNativeZoom: 15,
+  attribution: '&copy; <a href="https://maps.google.com" target="_blank" rel="noopener">Google Maps 地形</a>'
+});
+
+// 預設載入標準街道圖
+googleRoads.addTo(map);
+
+// 提供左上角底圖快速切換（避免與右上角收合面板按鈕重疊衝突）
+L.control.layers({
+  "Google 街道地圖": googleRoads,
+  "Google 衛星混合": googleHybrid,
+  "Google 地形圖": googleTerrain
+}, null, { position: "topleft" }).addTo(map);
+
+// 在左下角加入「我的定位」按鈕
+const LocControl = L.Control.extend({
+  options: { position: "bottomleft" },
+  onAdd: function(map) {
+    const container = L.DomUtil.create("div", "leaflet-bar leaflet-control leaflet-control-locate");
+    const btn = L.DomUtil.create("a", "locate-btn", container);
+    btn.href = "#";
+    btn.title = "我的定位（儲存後不再重複彈窗確認）";
+    btn.setAttribute("role", "button");
+    btn.setAttribute("aria-label", "我的定位");
+    btn.innerHTML = `
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="7"></circle>
+        <circle cx="12" cy="12" r="2.5" fill="currentColor"></circle>
+        <line x1="12" y1="1" x2="12" y2="5"></line>
+        <line x1="12" y1="19" x2="12" y2="23"></line>
+        <line x1="1" y1="12" x2="5" y2="12"></line>
+        <line x1="19" y1="12" x2="23" y2="12"></line>
+      </svg>`;
+    // 按鈕 2: 在地圖上手動點選位置
+    const btnPick = L.DomUtil.create("a", "pick-btn", container);
+    btnPick.href = "#";
+    btnPick.title = "在地圖上直接點擊自訂我的真實位置";
+    btnPick.setAttribute("role", "button");
+    btnPick.setAttribute("aria-label", "點圖定位");
+    btnPick.innerHTML = `
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+        <circle cx="12" cy="10" r="3"></circle>
+      </svg>`;
+
+    L.DomEvent.disableClickPropagation(container);
+    L.DomEvent.on(btn, "click", function(e) {
+      L.DomEvent.preventDefault(e);
+      handleLocate();
+    });
+    L.DomEvent.on(btnPick, "click", function(e) {
+      L.DomEvent.preventDefault(e);
+      enterMapPickMode();
+    });
+    return container;
+  }
+});
+map.addControl(new LocControl());
+
+/* ---------- user location & collapse panel logic ---------- */
+let userMarker = null;
+let isPickingLocation = false;
+
+function enterMapPickMode() {
+  closeMobileSheet();
+  isPickingLocation = true;
+  if (userMarker) userMarker.closePopup();
+  document.getElementById("map").classList.add("map-pick-mode");
+  const banner = document.getElementById("mapPickBanner");
+  if (banner) banner.classList.add("show");
+}
+
+function exitMapPickMode() {
+  isPickingLocation = false;
+  document.getElementById("map").classList.remove("map-pick-mode");
+  const banner = document.getElementById("mapPickBanner");
+  if (banner) banner.classList.remove("show");
+}
+
+function setUserLocationAt(lat, lon, method) {
+  exitMapPickMode();
+  localStorage.setItem("ikea_user_location", JSON.stringify({
+    lat: lat,
+    lon: lon,
+    accuracy: 20,
+    method: method || "manual",
+    time: Date.now()
+  }));
+  renderUserLocation(lat, lon, 20, method || "manual");
+}
+
+map.on("click", function(e) {
+  if (isPickingLocation) {
+    setUserLocationAt(e.latlng.lat, e.latlng.lng, "manual");
+  }
+});
+
+map.on("contextmenu", function(e) {
+  // 支援滑鼠右鍵快速在任意處設定位置
+  setUserLocationAt(e.latlng.lat, e.latlng.lng, "manual");
+});
+
+function detectRegionFromCoords(lat, lon) {
+  if (lat >= 21.5 && lat <= 25.6 && lon >= 119.5 && lon <= 122.5) {
+    return "tw";
+  }
+  return "hk";
+}
+
+function renderUserLocation(lat, lon, accuracy, method, city) {
+  // 自動依定位位置切換地區分頁（台灣 或 香港），確保週邊門市立刻顯示
+  const targetRegion = detectRegionFromCoords(lat, lon);
+  if (region !== targetRegion) {
+    region = targetRegion;
+    activeFilterCat = "all";
+    selectedKey = null;
+    const qEl = document.getElementById("q");
+    if (qEl) qEl.value = "";
+    document.querySelectorAll(".tab").forEach(t =>
+      t.classList.toggle("active", t.dataset.region === targetRegion));
+  }
+  // 不論地區分頁是否切換，只要定位更新（自動定位／手動釘選／拖曳微調）就重新整理清單，
+  // 讓每個據點的「距您 X km」與「離我最近」排序都依最新座標重新計算
+  render();
+
+  if (userMarker) map.removeLayer(userMarker);
+
+  const icon = L.divIcon({
+    className: "gmap-user-loc-icon",
+    html: `<div class="gmap-user-loc-wrapper" title="我的位置（可隨時拖曳微調，點擊展開選單）"><div class="gmap-pulse-ring"></div><div class="gmap-core-dot"></div></div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14]
+  });
+
+  userPopupArgs = { lat, lon, accuracy, method, city };
+  const popupHtml = buildUserPopupHtml(userPopupArgs);
+
+  // 支援拖曳圖釘，放開後自動更新並記住新座標（不繪製任何圓形範圍圈）
+  userMarker = L.marker([lat, lon], { icon, draggable: true })
+    .addTo(map)
+    .bindPopup(popupHtml, { minWidth: 272, maxWidth: 300, className: "uloc-popup" });
+
+  userMarker.on("dragend", function(e) {
+    const pos = e.target.getLatLng();
+    localStorage.setItem("ikea_user_location", JSON.stringify({
+      lat: pos.lat,
+      lon: pos.lng,
+      accuracy: 20,
+      method: "dragged",
+      time: Date.now()
+    }));
+    renderUserLocation(pos.lat, pos.lng, 20, "dragged");
+  });
+
+  const btnLoc = document.querySelector(".locate-btn");
+  if (btnLoc) btnLoc.classList.add("active");
+
+  map.flyTo([lat, lon], Math.max(map.getZoom(), 14), { duration: 0.8 });
+
+  // 正在看路線時位置變了（自動定位／釘選／拖曳），用新起點重新規劃
+  if (activeRoute) {
+    const s = findStoreByKey(activeRoute.storeKey);
+    if (s) loadAndDrawRoute(s, activeRoute.storeKey, activeRoute.mode);
+  }
+}
+
+let userPopupArgs = null;
+
+function refreshUserPopup() {
+  if (userMarker && userPopupArgs) userMarker.setPopupContent(buildUserPopupHtml(userPopupArgs));
+}
+
+function buildUserPopupHtml({ lat, lon, accuracy, method, city }) {
+  // 位置來源說明
+  const isAuto = method === "gps" || method === "ip";
+  let sourceIcon = ICONS.pin, sourceTitle = "手動釘選", sourceDetail = "你在地圖上指定的位置";
+  if (method === "gps") {
+    sourceIcon = ICONS.gps; sourceTitle = "自動定位（GPS／WiFi）";
+    sourceDetail = accuracy ? `誤差約 ${formatDistance(accuracy / 1000)}` : "由瀏覽器提供的位置";
+  } else if (method === "ip") {
+    sourceIcon = ICONS.globe; sourceTitle = "自動定位（網路 IP 估算）";
+    sourceDetail = `${city ? city + "，" : ""}誤差可能達數公里`;
+  } else if (method === "dragged") {
+    sourceTitle = "手動調整";
+    sourceDetail = "你拖曳藍點調整過的位置";
+  }
+  const ipWarning = method === "ip"
+    ? `<div class="uloc-notice">${ICONS.warning}<span>使用公司網路或 VPN 時，IP 估算常會偏離實際位置。位置不對的話，請改用「在地圖上指定」。</span></div>`
+    : "";
+
+  // 最近的營業中據點
+  const nearest = DATA[region].stores
+    .filter(s => !s.closed)
+    .map(s => ({ s, d: calcDistanceKm(lat, lon, s.lat, s.lon) }))
+    .sort((a, b) => a.d - b.d)[0];
+  const nearestHtml = nearest ? `
+      <div class="uloc-section">
+        <div class="uloc-label">離你最近的據點</div>
+        <div class="uloc-nearest">
+          <span class="uloc-dot" style="background:${CATS[nearest.s.cat].color}"></span>
+          <div class="uloc-nearest-text">
+            <div class="uloc-nearest-name">${nearest.s.zh}</div>
+            <div class="uloc-nearest-dist">${travelText(region + nearest.s.n, nearest.d)}・${CATS[nearest.s.cat].label.split("（")[0]}</div>
+          </div>
+          <a class="uloc-btn uloc-btn--emph uloc-btn--xs" href="${gmapsUrl(nearest.s)}" target="_blank" rel="noopener">${ICONS.navigate} 導航</a>
+        </div>
+      </div>` : "";
+
+  return `
+    <div class="uloc">
+      <div class="uloc-head">
+        <span class="uloc-head-icon">${sourceIcon}</span>
+        <div>
+          <div class="uloc-title">我的位置</div>
+          <div class="uloc-source">${sourceTitle}<span class="uloc-source-detail">${sourceDetail}</span></div>
+        </div>
+      </div>
+      ${ipWarning}
+      ${nearestHtml}
+      <div class="uloc-actions">
+        <button class="uloc-btn uloc-btn--emph" onclick="map.closePopup();requestFreshLocation()">${ICONS.gps} ${isAuto ? "重新自動定位" : "改用自動定位"}</button>
+        <button class="uloc-btn uloc-btn--secondary" onclick="map.closePopup();enterMapPickMode()">${ICONS.pin} 在地圖上指定</button>
+      </div>
+      <div class="uloc-foot">
+        <span>可直接拖曳藍點微調</span>
+        <button class="uloc-link" onclick="clearUserLocation()">清除我的位置</button>
+      </div>
+    </div>`;
+}
+
+function handleLocate() {
+  const saved = localStorage.getItem("ikea_user_location");
+  if (saved) {
+    try {
+      const loc = JSON.parse(saved);
+      if (loc && typeof loc.lat === "number" && typeof loc.lon === "number") {
+        renderUserLocation(loc.lat, loc.lon, loc.accuracy, loc.method || "manual", loc.city);
+        return;
+      }
+    } catch(e) {}
+  }
+  requestFreshLocation();
+}
+
+async function fetchIpLocation() {
+  // 1. GeoJS (快速、免金鑰、支援 CORS)
+  try {
+    const res = await fetch("https://get.geojs.io/v1/ip/geo.json");
+    const data = await res.json();
+    if (data && data.latitude && data.longitude) {
+      return {
+        lat: parseFloat(data.latitude),
+        lon: parseFloat(data.longitude),
+        city: data.city || data.region || "",
+        accuracy: 2500
+      };
+    }
+  } catch(e) {}
+
+  // 2. ipwho.is (備援、免金鑰、支援 CORS)
+  try {
+    const res = await fetch("https://ipwho.is/");
+    const data = await res.json();
+    if (data && data.success && data.latitude && data.longitude) {
+      return {
+        lat: parseFloat(data.latitude),
+        lon: parseFloat(data.longitude),
+        city: data.city || data.region || "",
+        accuracy: 2500
+      };
+    }
+  } catch(e) {}
+
+  // 3. ipapi.co (第3層備援)
+  try {
+    const res = await fetch("https://ipapi.co/json/");
+    const data = await res.json();
+    if (data && data.latitude && data.longitude) {
+      return {
+        lat: parseFloat(data.latitude),
+        lon: parseFloat(data.longitude),
+        city: data.city || data.region || "",
+        accuracy: 2500
+      };
+    }
+  } catch(e) {}
+
+  return null;
+}
+
+async function requestFreshLocation() {
+  const btn = document.querySelector(".locate-btn");
+  if (btn) btn.classList.add("locating");
+
+  let gotLocation = false;
+
+  // 1. 若在安全上下文（HTTPS / localhost）且支援 GPS，先嘗試瀏覽器高精度定位
+  const isLocalFile = window.location.protocol === "file:" || !window.isSecureContext;
+
+  if (!isLocalFile && navigator.geolocation) {
+    try {
+      await new Promise(resolve => {
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            const acc = pos.coords.accuracy || 50;
+            localStorage.setItem("ikea_user_location", JSON.stringify({
+              lat, lon, accuracy: acc, method: "gps", time: Date.now()
+            }));
+            renderUserLocation(lat, lon, acc, "gps");
+            gotLocation = true;
+            resolve();
+          },
+          err => {
+            console.warn("GPS 定位未取得，切換為 IP 定位備援:", err);
+            resolve();
+          },
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+        );
+      });
+    } catch(e) {}
+  }
+
+  // 2. 備援方案：若處於本機 file:// 環境或 GPS 逾時/阻擋，即刻透過 IP 網路秒速取得定位
+  if (!gotLocation) {
+    const ipLoc = await fetchIpLocation();
+    if (ipLoc) {
+      localStorage.setItem("ikea_user_location", JSON.stringify({
+        lat: ipLoc.lat,
+        lon: ipLoc.lon,
+        accuracy: ipLoc.accuracy,
+        city: ipLoc.city,
+        method: "ip",
+        time: Date.now()
+      }));
+      renderUserLocation(ipLoc.lat, ipLoc.lon, ipLoc.accuracy, "ip", ipLoc.city);
+      gotLocation = true;
+    }
+  }
+
+  if (btn) btn.classList.remove("locating");
+
+  if (!gotLocation) {
+    alert("瀏覽器無法取得自動定位（本機 file:// 模式受瀏覽器安全限制，且網路 IP 定位暫時不可用）。\n建議：您可以直接點選右側門市清單查看各據點！");
+  }
+}
+
+function clearUserLocation() {
+  localStorage.removeItem("ikea_user_location");
+  if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
+  const btn = document.querySelector(".locate-btn");
+  if (btn) btn.classList.remove("active");
+  exitMapPickMode();
+  map.closePopup();
+  clearRoute();
+  // 位置清除後，距離標示與「離我最近」排序都已無依據，一併重整清單
+  sortByDistance = false;
+  render();
+}
+
+function isMobileLayout() {
+  return window.innerWidth <= 820;
+}
+
+function toggleAside() {
+  const wrap = document.querySelector(".wrap");
+  const btn = document.getElementById("toggleAsideBtn");
+
+  if (isMobileLayout()) {
+    // 手機版：門市列表／篩選是由下往上滑出的漢堡面板，地圖預設全螢幕
+    const isOpen = wrap.classList.toggle("mobile-sheet-open");
+    if (isOpen) {
+      btn.innerHTML = `<span class="toggle-icon">${ICONS.close}</span><span>關閉</span>`;
+      btn.title = "關閉門市列表";
+    } else {
+      btn.innerHTML = `<span class="toggle-icon">${ICONS.hamburger}</span><span>門市列表</span>`;
+      btn.title = "顯示門市列表與篩選";
+    }
+  } else {
+    // 桌面版：原本的收合／展開側欄面板
+    const isCollapsed = wrap.classList.toggle("aside-collapsed");
+    if (isCollapsed) {
+      btn.innerHTML = `<span class="toggle-icon">${ICONS.chevronLeft}</span><span>展開清單</span>`;
+      btn.title = "展開右側門市列表";
+    } else {
+      btn.innerHTML = `<span class="toggle-icon">${ICONS.chevronRight}</span><span>收合面板</span>`;
+      btn.title = "收合右側門市列表";
+    }
+  }
+  wrap.scrollLeft = 0;
+  setTimeout(() => {
+    wrap.scrollLeft = 0;
+    map.invalidateSize();
+  }, 320);
+}
+
+function closeMobileSheet() {
+  if (!isMobileLayout()) return;
+  const wrap = document.querySelector(".wrap");
+  if (!wrap.classList.contains("mobile-sheet-open")) return;
+  wrap.classList.remove("mobile-sheet-open");
+  const btn = document.getElementById("toggleAsideBtn");
+  if (btn) {
+    btn.innerHTML = `<span class="toggle-icon">${ICONS.hamburger}</span><span>門市列表</span>`;
+    btn.title = "顯示門市列表與篩選";
+  }
+}
+
+function updateFilterBadge() {
+  const btn = document.getElementById("toggleAsideBtn");
+  if (!btn) return;
+  const hasActiveFilter = activeFilterCat !== "all" || sortByDistance;
+  btn.classList.toggle("has-filters", hasActiveFilter);
+}
+
+let region = "hk";
+let markers = {};          // key -> marker
+let activeFilterCat = "all";
+let sortByDistance = false;
+let selectedKey = null;
+
+function getUserLocationCoords() {
+  const saved = localStorage.getItem("ikea_user_location");
+  if (!saved) return null;
+  try {
+    const parsed = JSON.parse(saved);
+    if (parsed && typeof parsed.lat === "number" && typeof parsed.lon === "number") {
+      return parsed;
+    }
+  } catch(e) {}
+  return null;
+}
+
+function calcDistanceKm(lat1, lon1, lat2, lon2) {
+  const R = 6371; // 地球半徑 (km)
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function formatDistance(km) {
+  if (km == null || isNaN(km)) return "";
+  if (km < 1) {
+    return `${Math.round(km * 1000)} m`;
+  }
+  return `${km.toFixed(1)} km`;
+}
+
+/* ---------- 交通時間（透過 Netlify Function 呼叫 Google Routes API） ---------- */
+const TRAVEL_MODES = {
+  STRAIGHT: { label: "直線", icon: () => ICONS.nearMe },
+  DRIVE:    { label: "開車", icon: () => ICONS.car },
+  TRANSIT:  { label: "大眾運輸", icon: () => ICONS.transit },
+  WALK:     { label: "步行", icon: () => ICONS.walk },
+};
+const ROUTES_ENDPOINT = "/.netlify/functions/routes";
+const ROUTE_TOP_N = 5;       // 只查直線距離最近的幾間，控制 API 用量
+const WALK_MAX_KM = 5;       // 超過這個直線距離就不查步行
+let travelMode = TRAVEL_MODES[localStorage.getItem("ikea_travel_mode")] ? localStorage.getItem("ikea_travel_mode") : "STRAIGHT";
+let travelUnavailable = false;
+const routeCache = {};       // "模式|起點(約110m格)|據點" -> "loading" | {seconds, meters} | {error}
+const straightKmByKey = {};  // 最近一次畫面上各據點的直線距離，供更新標籤用
+
+function originKey(loc) {
+  return loc.lat.toFixed(3) + "," + loc.lon.toFixed(3);
+}
+
+function routeFor(storeKey) {
+  const loc = getUserLocationCoords();
+  if (!loc || travelMode === "STRAIGHT") return null;
+  return routeCache[`${travelMode}|${originKey(loc)}|${storeKey}`];
+}
+
+function formatDuration(sec) {
+  const m = Math.max(1, Math.round(sec / 60));
+  if (m < 60) return `${m} 分鐘`;
+  const h = Math.floor(m / 60), r = m % 60;
+  return r ? `${h} 小時 ${r} 分` : `${h} 小時`;
+}
+
+function travelText(storeKey, straightKm) {
+  const straight = `直線 ${formatDistance(straightKm)}`;
+  if (travelMode === "STRAIGHT") return straight;
+  const label = TRAVEL_MODES[travelMode].label;
+  if (travelMode === "WALK" && straightKm > WALK_MAX_KM) return `${straight}（不建議步行）`;
+  const r = routeFor(storeKey);
+  if (r === "loading") return `${label}計算中…`;
+  if (r && r.seconds != null) {
+    return `${label} ${formatDuration(r.seconds)}${r.meters ? `・${formatDistance(r.meters / 1000)}` : ""}`;
+  }
+  if (r && r.error === "NO_ROUTE") return `查無${label}路線・${straight}`;
+  return straight;
+}
+
+function travelBadgeHtml(storeKey, straightKm) {
+  const r = routeFor(storeKey);
+  const hasRoute = r && r.seconds != null;
+  const icon = hasRoute || r === "loading" ? TRAVEL_MODES[travelMode].icon() : ICONS.nearMe;
+  return `${icon}<span>${travelText(storeKey, straightKm)}</span>`;
+}
+
+function updateTravelBadges() {
+  document.querySelectorAll(".distance-badge[data-key]").forEach(el => {
+    const key = el.dataset.key;
+    if (straightKmByKey[key] != null) el.innerHTML = travelBadgeHtml(key, straightKmByKey[key]);
+  });
+  refreshUserPopup();
+  renderTravelModes();
+}
+
+async function fetchRoutes(candidates) {
+  const loc = getUserLocationCoords();
+  if (!loc || travelMode === "STRAIGHT") return;
+  const mode = travelMode, oKey = originKey(loc);
+  const targets = candidates
+    .filter(c => !(mode === "WALK" && c.km > WALK_MAX_KM))
+    .filter(c => routeCache[`${mode}|${oKey}|${c.key}`] === undefined);
+  if (!targets.length) return;
+
+  targets.forEach(c => { routeCache[`${mode}|${oKey}|${c.key}`] = "loading"; });
+  updateTravelBadges();
+
+  let results = null;
+  try {
+    const res = await fetch(ROUTES_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "matrix",
+        mode,
+        origin: { lat: loc.lat, lon: loc.lon },
+        destinations: targets.map(c => ({ id: c.key, lat: c.s.lat, lon: c.s.lon })),
+      }),
+    });
+    if (res.ok) results = (await res.json()).results;
+  } catch (e) {}
+
+  if (results) {
+    travelUnavailable = false;
+    targets.forEach(c => {
+      routeCache[`${mode}|${oKey}|${c.key}`] = results[c.key] || { error: "NO_ROUTE" };
+    });
+  } else {
+    // 服務暫時無法使用：清掉 loading，下次切換時可重試，畫面先退回直線距離
+    travelUnavailable = true;
+    targets.forEach(c => { delete routeCache[`${mode}|${oKey}|${c.key}`]; });
+  }
+  updateTravelBadges();
+}
+
+function requestRoutesFor(visibleStores) {
+  const loc = getUserLocationCoords();
+  if (!loc || travelMode === "STRAIGHT") return;
+  const pick = new Map();
+  visibleStores.filter(s => !s.closed && s._dist != null)
+    .sort((a, b) => a._dist - b._dist).slice(0, ROUTE_TOP_N)
+    .forEach(s => pick.set(region + s.n, { key: region + s.n, s, km: s._dist }));
+  // 「我的位置」資訊卡顯示的最近據點，即使被分類篩選掉也一併計算
+  const nearest = DATA[region].stores.filter(s => !s.closed)
+    .map(s => ({ s, km: calcDistanceKm(loc.lat, loc.lon, s.lat, s.lon) }))
+    .sort((a, b) => a.km - b.km)[0];
+  if (nearest) pick.set(region + nearest.s.n, { key: region + nearest.s.n, s: nearest.s, km: nearest.km });
+  fetchRoutes([...pick.values()]);
+}
+
+function setTravelMode(mode) {
+  travelMode = mode;
+  try { localStorage.setItem("ikea_travel_mode", mode); } catch (e) {}
+  render();
+}
+
+function renderTravelModes() {
+  const el = document.getElementById("travelModes");
+  if (!el) return;
+  if (!getUserLocationCoords()) { el.innerHTML = ""; el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = `
+    <div class="travel-seg" role="radiogroup" aria-label="距離計算方式">
+      ${Object.entries(TRAVEL_MODES).map(([k, m]) => `
+        <button role="radio" aria-checked="${k === travelMode}" class="travel-seg-btn${k === travelMode ? " active" : ""}" onclick="setTravelMode('${k}')">${m.icon()}<span>${m.label}</span></button>`).join("")}
+    </div>
+    ${travelMode !== "STRAIGHT" ? `<div class="travel-hint">${travelUnavailable
+      ? "暫時無法取得交通時間，先顯示直線距離。"
+      : `顯示離你最近 ${ROUTE_TOP_N} 間的${TRAVEL_MODES[travelMode].label}時間（Google 地圖資料），其餘為直線距離。`}</div>` : ""}`;
+}
+
+/* ---------- 地圖路線（類似 Google 地圖的路線規劃） ---------- */
+const ROUTE_MODES = ["DRIVE", "TRANSIT", "WALK"];
+const GMAPS_MODE = { DRIVE: "driving", TRANSIT: "transit", WALK: "walking" };
+const VEHICLE_LABEL = { SUBWAY: "地鐵", METRO_RAIL: "地鐵", HEAVY_RAIL: "鐵路", COMMUTER_TRAIN: "火車", RAIL: "鐵路",
+  HIGH_SPEED_TRAIN: "高鐵", LONG_DISTANCE_TRAIN: "火車", LIGHT_RAIL: "輕鐵", TRAM: "電車", MONORAIL: "單軌",
+  BUS: "巴士", INTERCITY_BUS: "客運", TROLLEYBUS: "巴士", SHARE_TAXI: "小巴", FERRY: "渡輪", CABLE_CAR: "纜車",
+  GONDOLA_LIFT: "纜車", FUNICULAR: "纜車" };
+const routeResultCache = {};   // "模式|起點|據點" -> route | null
+let routeLayer = null;
+let activeRoute = null;        // { storeKey, mode }
+let routeRequestSeq = 0;
+
+// Google 編碼折線（Encoded Polyline Algorithm）解碼
+function decodePolyline(str) {
+  const pts = [];
+  let i = 0, lat = 0, lng = 0;
+  while (i < str.length) {
+    for (const axis of [0, 1]) {
+      let shift = 0, result = 0, b;
+      do { b = str.charCodeAt(i++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      const delta = (result & 1) ? ~(result >> 1) : (result >> 1);
+      if (axis === 0) lat += delta; else lng += delta;
+    }
+    pts.push([lat / 1e5, lng / 1e5]);
+  }
+  return pts;
+}
+
+function findStoreByKey(storeKey) {
+  for (const r of ["tw", "hk"]) {
+    const s = DATA[r].stores.find(x => r + x.n === storeKey);
+    if (s) return s;
+  }
+  return null;
+}
+
+function directionsUrl(s, mode) {
+  const loc = getUserLocationCoords();
+  const origin = loc ? `&origin=${loc.lat},${loc.lon}` : "";
+  return `https://www.google.com/maps/dir/?api=1${origin}&destination=${s.lat},${s.lon}&travelmode=${GMAPS_MODE[mode] || "driving"}`;
+}
+
+function showRoute(storeKey, mode) {
+  const s = findStoreByKey(storeKey);
+  if (!s) return;
+  mode = ROUTE_MODES.includes(mode) ? mode : (ROUTE_MODES.includes(travelMode) ? travelMode : "DRIVE");
+  closeMobileSheet();
+  map.closePopup();
+
+  if (!getUserLocationCoords()) {
+    activeRoute = { storeKey, mode };
+    renderRoutePanel(s, mode, { needLocation: true });
+    return;
+  }
+  activeRoute = { storeKey, mode };
+  loadAndDrawRoute(s, storeKey, mode);
+}
+
+async function loadAndDrawRoute(s, storeKey, mode) {
+  const loc = getUserLocationCoords();
+  const cacheKey = `${mode}|${originKey(loc)}|${storeKey}`;
+  const seq = ++routeRequestSeq;
+
+  if (!(cacheKey in routeResultCache)) {
+    clearRouteLayer();
+    renderRoutePanel(s, mode, { loading: true });
+    let route, failed = false;
+    try {
+      const res = await fetch(ROUTES_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "route", mode, origin: { lat: loc.lat, lon: loc.lon }, destination: { lat: s.lat, lon: s.lon } }),
+      });
+      if (res.ok) route = (await res.json()).route; else failed = true;
+    } catch (e) { failed = true; }
+    if (seq !== routeRequestSeq) return;   // 使用者已切換到別的路線，丟棄過期結果
+    if (failed) { renderRoutePanel(s, mode, { error: true }); return; }
+    routeResultCache[cacheKey] = route || null;
+  }
+
+  const route = routeResultCache[cacheKey];
+  if (!route) { clearRouteLayer(); renderRoutePanel(s, mode, { noRoute: true }); return; }
+  renderRoutePanel(s, mode, { route });
+  drawRoute(route, mode, s);
+}
+
+function clearRouteLayer() {
+  if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+}
+
+function drawRoute(route, mode, s) {
+  clearRouteLayer();
+  routeLayer = L.layerGroup().addTo(map);
+  const BLUE = "#0058A3";
+  const addLine = (pts, color, walking) => {
+    if (walking) {
+      // 步行段：Google 地圖式的圓點虛線
+      L.polyline(pts, { color, weight: 6, opacity: 0.9, dashArray: "0 11", lineCap: "round", interactive: false }).addTo(routeLayer);
+    } else {
+      L.polyline(pts, { color: "#fff", weight: 10, opacity: 1, lineCap: "round", lineJoin: "round", interactive: false }).addTo(routeLayer);
+      L.polyline(pts, { color, weight: 6, opacity: 1, lineCap: "round", lineJoin: "round", interactive: false }).addTo(routeLayer);
+    }
+  };
+
+  let all = [];
+  if (mode === "TRANSIT" && route.steps && route.steps.length) {
+    route.steps.forEach(st => {
+      const pts = st.polylines.filter(Boolean).flatMap(decodePolyline);
+      if (!pts.length) return;
+      all = all.concat(pts);
+      addLine(pts, st.line ? (st.line.color || BLUE) : "#5E6A73", !st.line);
+    });
+  }
+  if (!all.length) {
+    all = decodePolyline(route.polyline);
+    addLine(all, BLUE, mode === "WALK");
+  }
+
+  // 終點旗標（起點就是「我的位置」藍點）
+  L.circleMarker([s.lat, s.lon], { radius: 7, color: "#fff", weight: 3, fillColor: "#111", fillOpacity: 1, interactive: false }).addTo(routeLayer);
+
+  // 預留路線資訊卡的位置：桌面版在左側、手機版在底部
+  const mobile = isMobileLayout();
+  const panel = document.getElementById("routePanel");
+  map.fitBounds(L.latLngBounds(all), {
+    paddingTopLeft: mobile ? [32, 32] : [(panel.offsetLeft + panel.offsetWidth) || 430, 48],
+    paddingBottomRight: mobile ? [32, (panel.offsetHeight || 240) + 32] : [48, 48],
+    maxZoom: 17,
+  });
+}
+
+function routeStepsHtml(route) {
+  const steps = route.steps || [];
+  if (!steps.length) return "";
+  const chips = steps.map(st => st.line
+    ? `<span class="rt-chip rt-chip--line" style="background:${st.line.color || "#0058A3"};color:${st.line.textColor || "#fff"}">${ICONS.transit}${st.line.name || VEHICLE_LABEL[st.line.vehicle] || "大眾運輸"}</span>`
+    : `<span class="rt-chip">${ICONS.walk}${st.seconds ? Math.max(1, Math.round(st.seconds / 60)) + " 分" : "步行"}</span>`
+  ).join(`<span class="rt-sep">›</span>`);
+  const details = steps.filter(st => st.line).map(st => `
+    <li><span class="rt-dot" style="background:${st.line.color || "#0058A3"}"></span>
+      <span><b>${st.line.name || VEHICLE_LABEL[st.line.vehicle] || "大眾運輸"}</b>${VEHICLE_LABEL[st.line.vehicle] && st.line.name ? `（${VEHICLE_LABEL[st.line.vehicle]}）` : ""}
+      ${st.from} → ${st.to}${st.stops ? `・${st.stops} 站` : ""}</span></li>`).join("");
+  return `<div class="rt-chips">${chips}</div>${details ? `<ul class="rt-details">${details}</ul>` : ""}`;
+}
+
+function renderRoutePanel(s, mode, state) {
+  const panel = document.getElementById("routePanel");
+  const wrap = document.querySelector(".wrap");
+  wrap.classList.add("route-open");
+  const tabs = ROUTE_MODES.map(m => `
+    <button class="travel-seg-btn${m === mode ? " active" : ""}" role="radio" aria-checked="${m === mode}" onclick="showRoute('${activeRoute.storeKey}','${m}')">${TRAVEL_MODES[m].icon()}<span>${TRAVEL_MODES[m].label}</span></button>`).join("");
+
+  let body;
+  if (state.needLocation) {
+    body = `<div class="rt-msg">要規劃路線，請先設定你的位置。</div>
+      <div class="rt-actions">
+        <button class="uloc-btn uloc-btn--emph" onclick="requestFreshLocation()">${ICONS.gps} 自動定位</button>
+        <button class="uloc-btn uloc-btn--secondary" onclick="enterMapPickMode()">${ICONS.pin} 在地圖上指定</button>
+      </div>`;
+  } else if (state.loading) {
+    body = `<div class="rt-msg">正在規劃${TRAVEL_MODES[mode].label}路線…</div>`;
+  } else if (state.error) {
+    body = `<div class="rt-msg">暫時無法取得路線，請稍後再試，或直接用 Google 地圖導航。</div>`;
+  } else if (state.noRoute) {
+    body = `<div class="rt-msg">查無${TRAVEL_MODES[mode].label}路線，請改用其他交通方式。</div>`;
+  } else {
+    const r = state.route;
+    body = `<div class="rt-summary"><span class="rt-time">${formatDuration(r.seconds)}</span><span class="rt-dist">${r.meters ? formatDistance(r.meters / 1000) : ""}</span></div>
+      ${mode === "TRANSIT" ? routeStepsHtml(r) : ""}`;
+  }
+
+  panel.innerHTML = `
+    <div class="rt-head">
+      <div class="rt-title-wrap">
+        <div class="rt-label">路線前往</div>
+        <div class="rt-title"><span class="uloc-dot" style="background:${CATS[s.cat].color}"></span>${s.zh}</div>
+      </div>
+      <button class="rt-close" onclick="clearRoute()" aria-label="關閉路線">${ICONS.close}</button>
+    </div>
+    <div class="travel-seg" role="radiogroup" aria-label="交通方式">${tabs}</div>
+    ${body}
+    ${state.needLocation ? "" : `<a class="uloc-btn uloc-btn--emph rt-nav" href="${directionsUrl(s, mode)}" target="_blank" rel="noopener">${ICONS.navigate} 用 Google 地圖導航</a>`}`;
+  panel.hidden = false;
+}
+
+function clearRoute() {
+  activeRoute = null;
+  routeRequestSeq++;
+  clearRouteLayer();
+  const panel = document.getElementById("routePanel");
+  panel.hidden = true;
+  panel.innerHTML = "";
+  document.querySelector(".wrap").classList.remove("route-open");
+}
+
+function clearSearch() {
+  const qEl = document.getElementById("q");
+  if (qEl) qEl.value = "";
+  render();
+}
+
+function gmapsUrl(s){
+  if (s.cid) return "https://maps.google.com/?cid=" + s.cid;
+  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(s.zh + " " + s.addr);
+}
+
+function makeIcon(s){
+  const c = CATS[s.cat].color;
+  return L.divIcon({
+    className:"pin",
+    html:`<div class="dot" style="background:${c}"><span>${s.n}</span></div>`,
+    iconSize:[32,32], iconAnchor:[16,32], popupAnchor:[0,-30]
+  });
+}
+
+function popupHtml(s){
+  const c = CATS[s.cat];
+  const userLoc = getUserLocationCoords();
+  const dist = userLoc ? calcDistanceKm(userLoc.lat, userLoc.lon, s.lat, s.lon) : null;
+  const distHtml = dist != null ? `<span style="font-size:12px;color:#111;font-weight:700;margin-left:6px;display:inline-flex;align-items:center;gap:4px;">${travelBadgeHtml(region + s.n, dist)}</span>` : '';
+  const closedHtml = s.closed ? `<span class="closed-badge" style="background:#607D8B;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:5px;">${s.closed}</span>` : '';
+  const lockerHtml = s.locker ? `<div style="font-size:11.5px;color:#0058A3;font-weight:700;background:#EBF3FA;padding:3px 8px;border-radius:6px;margin-bottom:6px;display:inline-flex;align-items:center;gap:4px;">${ICONS.locker} 自助提貨櫃：${s.locker}</div>` : '';
+  return `<div class="pop">
+    <h3>${s.zh}</h3>
+    <div class="en">${s.en}</div>
+    <div style="margin-bottom:6px;">
+      <span class="tag" style="background:${c.color}">${c.label.split("（")[0]}</span>
+      ${closedHtml}
+      ${distHtml}
+    </div>
+    ${lockerHtml}
+    <div class="addr">${s.addr}</div>
+    <div class="pop-actions">
+      ${s.closed ? "" : `<button class="uloc-btn uloc-btn--emph uloc-btn--xs" onclick="showRoute('${region + s.n}')">${ICONS.route} 路線</button>`}
+      <a class="uloc-btn uloc-btn--secondary uloc-btn--xs" href="${gmapsUrl(s)}" target="_blank" rel="noopener">${ICONS.navigate} Google 地圖</a>
+    </div>
+  </div>`;
+}
+
+function renderChips() {
+  const container = document.getElementById("filterChips");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const d = DATA[region];
+  const userLoc = getUserLocationCoords();
+
+  // 1. 全部 Chip
+  const allBtn = document.createElement("button");
+  allBtn.className = "chip" + (activeFilterCat === "all" ? " active" : "");
+  allBtn.innerHTML = `<span>全部</span><span class="chip-count">${d.stores.length}</span>`;
+  allBtn.onclick = () => {
+    activeFilterCat = "all";
+    render();
+  };
+  container.appendChild(allBtn);
+
+  // 2. 各店型分類 Chips
+  d.cats.forEach(cat => {
+    const count = d.stores.filter(s => s.cat === cat).length;
+    if (count === 0) return;
+    const btn = document.createElement("button");
+    const isActive = (activeFilterCat === cat);
+    btn.className = "chip" + (isActive ? " active" : "");
+    const label = CATS[cat].label.split("（")[0];
+    btn.innerHTML = `<span class="cat-dot" style="background:${CATS[cat].color}"></span><span>${label}</span><span class="chip-count">${count}</span>`;
+    btn.onclick = () => {
+      activeFilterCat = (activeFilterCat === cat) ? "all" : cat;
+      render();
+    };
+    container.appendChild(btn);
+  });
+
+  // 3. 離我最近 排序 Chip
+  const distBtn = document.createElement("button");
+  distBtn.className = "chip sort-nearest" + (sortByDistance ? " active" : "");
+  distBtn.innerHTML = `${ICONS.nearMe}<span>離我最近</span>`;
+  distBtn.title = userLoc ? "點擊切換：依據與我的位置由近到遠排序" : "尚未設定我的位置，點擊即可在地圖上指定或自動偵測！";
+  distBtn.onclick = () => {
+    if (!getUserLocationCoords()) {
+      alert("請先設定您的位置！\n您可點擊左下角「點圖定位」直接在地圖上指定，或點擊「自動定位」！");
+      enterMapPickMode();
+      return;
+    }
+    sortByDistance = !sortByDistance;
+    render();
+  };
+  container.appendChild(distBtn);
+}
+
+function renderNote() {
+  const el = document.getElementById("regionNote");
+  if (!el) return;
+  const stores = DATA[region].stores;
+  const count = cat => stores.filter(s => s.cat === cat && !s.closed).length;
+  const closedCount = stores.filter(s => s.closed).length;
+  const closedLine = closedCount
+    ? `<li>標示「已結束／已結業」的據點已停止營業，保留在清單中僅供參考。</li>` : "";
+
+  if (region === "hk") {
+    const lockerCount = stores.filter(s => s.locker && !s.closed).length;
+    const pickupCount = count("marketplace") + count("3hreesixty") + count("wellcome");
+    el.innerHTML = `
+      <div class="note-title">香港・澳門據點說明</div>
+      <ul>
+        <li><b>自助提貨櫃</b>：共 ${lockerCount} 處，網購訂單可於櫃內自行取貨，各櫃開放時間不同，請見卡片上的標示；搜尋「提貨櫃」即可快速篩選。</li>
+        <li><b>提貨站</b>：Market Place、3hreesixty、惠康等 ${pickupCount} 處合作超市，僅供網購訂單取貨，不設商品展示或現場購物。</li>
+        <li><b>規劃及訂購點</b>：提供家居規劃諮詢及下單服務，商品需另行送貨或提貨。</li>
+        <li><b>期間限定店</b>：營運期有限，前往前請先確認是否仍在營業。</li>
+        ${closedLine}
+      </ul>
+      <div>營業時間、提貨安排及臨時休息以 <a href="https://www.ikea.com.hk/zh/where-are-we" target="_blank" rel="noopener">IKEA 香港官網分店資訊</a> 最新公告為準。</div>`;
+  } else {
+    el.innerHTML = `
+      <div class="note-title">台灣門市說明</div>
+      <ul>
+        <li><b>大型門市</b>：提供完整展場、自助倉庫提貨及瑞典餐廳。</li>
+        <li><b>城市店</b>：小型門市，展示及現場商品有限，大型家具建議網購宅配或至大型門市選購。</li>
+        <li><b>訂購取貨中心</b>：提供家居規劃諮詢、下單及取貨服務，不設完整展場。</li>
+        <li><b>快閃店</b>：期間限定營業，前往前請先確認營業期間。</li>
+        ${closedLine}
+      </ul>
+      <div>營業時間、停車資訊及臨時休館（如颱風停止營業）以 <a href="https://www.ikea.com.tw/zh/store/index" target="_blank" rel="noopener">IKEA 台灣官網門市資訊</a> 最新公告為準。</div>`;
+  }
+}
+
+function render(){
+  renderChips();
+  updateFilterBadge();
+  renderNote();
+
+  // 清除地圖舊圖釘
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
+
+  const d = DATA[region];
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  // 搜尋框清除按鈕顯示/隱藏
+  const clearBtn = document.getElementById("clearSearchBtn");
+  if (clearBtn) clearBtn.style.display = q ? "block" : "none";
+
+  const userLoc = getUserLocationCoords();
+
+  // 篩選門市
+  let stores = d.stores.filter(s => {
+    const matchCat = (activeFilterCat === "all") || (s.cat === activeFilterCat);
+    const matchQ = !q || (s.zh + s.en + s.addr + (s.locker || '') + (s.closed || '')).toLowerCase().includes(q);
+    return matchCat && matchQ;
+  });
+
+  // 計算距離
+  stores.forEach(s => {
+    s._dist = userLoc ? calcDistanceKm(userLoc.lat, userLoc.lon, s.lat, s.lon) : null;
+    if (s._dist != null) straightKmByKey[region + s.n] = s._dist;
+  });
+  renderTravelModes();
+  requestRoutesFor(stores);
+
+  // 若啟用「離我最近」排序
+  if (sortByDistance && userLoc) {
+    stores.sort((a, b) => {
+      const distA = a._dist != null ? a._dist : 999999;
+      const distB = b._dist != null ? b._dist : 999999;
+      return distA - distB;
+    });
+  }
+
+  // 更新頂部摘要行
+  const summaryEl = document.getElementById("listCountHeader");
+  if (summaryEl) {
+    const catLabel = activeFilterCat === "all" ? "全部據點" : (CATS[activeFilterCat]?.label.split("（")[0] || "");
+    const sortBadge = sortByDistance ? `<span style="color:#F26A1B;font-size:11.5px;font-weight:800;display:inline-flex;align-items:center;gap:4px;">${ICONS.nearMe} 已依距離由近到遠排序</span>` : '';
+    summaryEl.innerHTML = `<span>${catLabel}：共 <b>${stores.length}</b> 處</span>${sortBadge}`;
+  }
+
+  if (stores.length === 0) {
+    list.innerHTML = `<div style="text-align:center;color:#667;padding:40px 10px;font-size:13.5px;line-height:1.6;">
+      <div style="margin-bottom:10px;color:#889;">
+        <svg class="ui-icon" viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          <line x1="8" y1="11" x2="14" y2="11"></line>
+        </svg>
+      </div>
+      未找到符合「${q}」的門市或提貨站<br>
+      <button onclick="clearSearch()" style="margin-top:12px;background:#0058A3;color:#fff;border:none;padding:6px 14px;border-radius:14px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">${ICONS.close} 清除搜尋</button>
+    </div>`;
+    return;
+  }
+
+  stores.forEach(s => {
+    const key = region + s.n;
+    const c = CATS[s.cat];
+
+    // 在地圖上繪製圖釘（只繪製目前篩選出的門市！）
+    const mk = L.marker([s.lat, s.lon], {icon: makeIcon(s)})
+      .addTo(map)
+      .bindPopup(() => popupHtml(s));
+    mk.on("click", () => selectStore(key, s, false));
+    markers[key] = mk;
+
+    // 清單卡片
+    const distStr = s._dist != null ? travelBadgeHtml(key, s._dist) : "";
+    const el = document.createElement("div");
+    el.className = "store" + (selectedKey === key ? " selected" : "");
+    el.dataset.key = key;
+    const closedBadge = s.closed ? `<span class="closed-badge">${s.closed}</span>` : '';
+    const lockerBadge = s.locker ? `<span class="locker-badge" title="設有 IKEA 自助提貨櫃：${s.locker}">${ICONS.locker} 自助提貨櫃</span>` : '';
+    el.innerHTML = `
+      <div class="badge" style="background:${c.color}">${s.n}</div>
+      <div class="store-body">
+        <div class="store-top-row">
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+            <span class="store-tag" style="background:${c.color}">${c.label.split("（")[0]}</span>
+            ${closedBadge}
+            ${lockerBadge}
+          </div>
+          ${distStr ? `<span class="distance-badge" data-key="${key}">${distStr}</span>` : ''}
+        </div>
+        <div class="name">${s.zh}　<span class="en">${s.en}</span></div>
+        <div class="addr">${s.addr}</div>
+        <div class="store-actions">
+          <button class="action-btn-view">${ICONS.pin} 查看</button>
+          ${s.closed ? "" : `<button class="action-btn-view" onclick="event.stopPropagation();showRoute('${key}')">${ICONS.route} 路線</button>`}
+          <a href="${gmapsUrl(s)}" target="_blank" rel="noopener" class="action-btn-nav">${ICONS.navigate} 導航</a>
+        </div>
+      </div>`;
+
+    el.onclick = ev => {
+      if (ev.target.tagName === "A") return;
+      selectStore(key, s, true);
+    };
+
+    // 滑鼠懸停時地圖圖釘提至最上層高亮
+    el.onmouseenter = () => {
+      if (markers[key]) markers[key].setZIndexOffset(1000);
+    };
+    el.onmouseleave = () => {
+      if (markers[key]) markers[key].setZIndexOffset(0);
+    };
+
+    list.appendChild(el);
+  });
+}
+
+function selectStore(key, s, fly){
+  selectedKey = key;
+  document.querySelectorAll(".store").forEach(e =>
+    e.classList.toggle("selected", e.dataset.key === key));
+  if (fly){
+    // 手機版從清單點選門市時，先收起面板讓使用者直接看到地圖上的位置
+    closeMobileSheet();
+    // 等飛行動畫真正結束才開啟資訊框；固定計時器在較慢的手機上會打斷動畫，導致地圖停在錯誤位置
+    map.once("moveend", () => markers[key] && markers[key].openPopup());
+    map.flyTo([s.lat, s.lon], Math.max(map.getZoom(), 14), {duration:.8});
+  }
+  const wrap = document.querySelector(".wrap");
+  // 僅在面板展開時捲動清單，且使用 aside.scrollTo 垂直捲動，考量吸頂標籤列高度偏移 70px
+  if (wrap && !wrap.classList.contains("aside-collapsed")) {
+    const el = document.querySelector(`.store[data-key="${key}"]`);
+    const aside = document.querySelector("aside");
+    if (el && aside) {
+      const targetTop = el.offsetTop - aside.offsetTop - 70;
+      aside.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
+    }
+  }
+  if (wrap) wrap.scrollLeft = 0;
+}
+
+function setRegion(r){
+  clearRoute();
+  region = r;
+  activeFilterCat = "all";
+  selectedKey = null;
+  const qEl = document.getElementById("q");
+  if (qEl) qEl.value = "";
+  document.querySelectorAll(".tab").forEach(t =>
+    t.classList.toggle("active", t.dataset.region === r));
+  const d = DATA[r];
+  map.setView(d.center, d.zoom);
+  render();
+}
+
+document.querySelectorAll(".tab").forEach(t =>
+  t.onclick = () => setRegion(t.dataset.region));
+document.getElementById("q").addEventListener("input", render);
+
+function syncToggleButtonForLayout() {
+  const btn = document.getElementById("toggleAsideBtn");
+  if (!btn) return;
+  if (isMobileLayout()) {
+    btn.innerHTML = `<span class="toggle-icon">${ICONS.hamburger}</span><span>門市列表</span>`;
+    btn.title = "顯示門市列表與篩選";
+  } else {
+    btn.innerHTML = `<span class="toggle-icon">${ICONS.chevronRight}</span><span>收合面板</span>`;
+    btn.title = "收合右側門市列表";
+  }
+}
+
+// 手機／桌面版跨斷點切換時（旋轉螢幕、調整視窗），清掉另一種版面的開合狀態，避免樣式互相衝突
+let lastIsMobile = isMobileLayout();
+window.addEventListener("resize", () => {
+  const nowMobile = isMobileLayout();
+  if (nowMobile === lastIsMobile) return;
+  lastIsMobile = nowMobile;
+  document.querySelector(".wrap").classList.remove("aside-collapsed", "mobile-sheet-open");
+  syncToggleButtonForLayout();
+  map.invalidateSize();
+});
+
+syncToggleButtonForLayout();
+setRegion("hk");
+</script>
+</body>
+</html>
