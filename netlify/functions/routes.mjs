@@ -52,8 +52,14 @@ async function callGoogle(url, key, fieldMask, body) {
     const text = await res.text();
     console.error("Routes API error", res.status, text);
     // 只回傳 Google 的錯誤代碼與訊息（不含 key），方便從瀏覽器端排查
+    // computeRoutes 的錯誤是 {error:{...}}，computeRouteMatrix 是 [{error:{...}}]
     let message = "";
-    try { message = JSON.parse(text).error?.message || ""; } catch {}
+    try {
+      const parsed = JSON.parse(text);
+      const err = Array.isArray(parsed) ? parsed[0]?.error : parsed.error;
+      message = [err?.status, err?.message].filter(Boolean).join(": ");
+    } catch {}
+    if (!message) message = text;
     return { __error: { status: res.status, message: message.slice(0, 300) } };
   }
   return res.json();
