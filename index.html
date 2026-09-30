@@ -685,6 +685,31 @@
 
   .short-label{display:none;}
 
+  /* ---------- 手機版地區／語言選單（桌面版不顯示） ---------- */
+  header{position:relative;}
+  .settings-btn, .settings-menu{display:none;}
+  .settings-btn{
+    margin-left:auto;min-height:36px;padding:0 12px;border-radius:10rem;flex-shrink:0;
+    border:1px solid var(--skapa-border-strong);background:#fff;color:var(--skapa-text);
+    align-items:center;gap:6px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;
+  }
+  .settings-btn[aria-expanded="true"]{background:var(--skapa-neutral);}
+  .settings-sep{color:var(--skapa-text-3);}
+  .settings-menu{
+    position:absolute;top:calc(100% + 4px);right:10px;width:240px;z-index:1500;
+    background:#fff;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);padding:8px 0;
+  }
+  .settings-menu[hidden]{display:none !important;}
+  .settings-group + .settings-group{border-top:1px solid var(--skapa-border);margin-top:8px;padding-top:8px;}
+  .settings-label{padding:4px 16px;font-size:12px;color:var(--skapa-text-3);}
+  .settings-opt{
+    width:100%;min-height:48px;padding:0 16px;border:none;background:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:space-between;
+    font-family:inherit;font-size:15px;color:var(--skapa-text);text-align:left;
+  }
+  .settings-opt:hover{background:var(--skapa-neutral);}
+  .settings-opt.active{font-weight:700;}
+
   /* ---------- 語言切換 ---------- */
   .lang-switch{
     min-height:40px;min-width:48px;padding:0 14px;border-radius:10rem;flex-shrink:0;
@@ -820,7 +845,11 @@
     aside{border-left:none;padding-top:10px;}
     .aside-sticky-header{border-bottom:none;margin-top:0;top:-10px;padding-top:8px;}
     .tab{min-height:32px;}
-    .lang-switch{min-height:32px;min-width:40px;padding:0 10px;font-size:12px;}
+    /* 手機版：地區分頁與語言按鈕收進「地區・語言」選單 */
+    header .tabs, header .lang-switch{display:none;}
+    .settings-btn{display:inline-flex;}
+    .settings-menu{display:block;}
+    header h1{flex:1;min-width:0;}
     .long-label{display:none;}
     .short-label{display:inline;}
     .tabs + .lang-switch{margin-left:4px;}
@@ -861,6 +890,9 @@
     <button class="tab active" data-region="hk"><span class="long-label" data-i18n="tabHk">香港・澳門</span><span class="short-label" data-i18n="tabHkShort">香港・澳門</span></button>
   </div>
   <button class="lang-switch" onclick="setLang(IS_EN ? 'zh' : 'en')" data-i18n="langSwitch" data-i18n-title="langSwitchTitle">EN</button>
+  <!-- 手機版：地區與語言收進一顆按鈕的下拉選單 -->
+  <button id="settingsBtn" class="settings-btn" aria-haspopup="true" aria-expanded="false" aria-controls="settingsMenu" onclick="toggleSettingsMenu()"></button>
+  <div id="settingsMenu" class="settings-menu" role="menu" hidden></div>
 </header>
 
 <div class="wrap">
@@ -941,7 +973,7 @@ function setLang(lang) {
 const I18N = {
   zh: {
     title: "IKEA 台灣・香港・澳門 門市地圖",
-    h1: "台灣・香港・澳門 門市及提貨點地圖", h1Short: "台灣・香港・澳門 門市及提貨點地圖", tabHkShort: "香港・澳門",
+    h1: "台灣・香港・澳門 門市及提貨點地圖", h1Short: "門市及提貨點地圖", tabHkShort: "香港・澳門",
     sub: "互動式門市及提貨據點查詢 ｜ 底圖採用 Google Maps",
     tabTw: "台灣", tabHk: "香港・澳門",
     langSwitch: "EN", langSwitchTitle: "Switch to English",
@@ -978,6 +1010,8 @@ const I18N = {
     routeErr: "暫時無法取得路線，請稍後再試，或直接用 Google 地圖導航。",
     noRoute: "查無{mode}路線，請改用其他交通方式。",
     noTraffic: "未計入即時路況，尖峰時段實際時間可能較長。",
+    region: "地區", language: "語言", settingsTitle: "切換地區與語言",
+    regionTwShort: "台灣", regionHkShort: "香港・澳門", langShort: "中",
     routeTo: "路線前往", closeRoute: "關閉路線", travelModeAria: "交通方式", openGmapsNav: "用 Google 地圖導航",
     route: "路線", view: "查看", gmaps: "Google 地圖",
     all: "全部", nearestSort: "離我最近",
@@ -1028,6 +1062,8 @@ const I18N = {
     routeErr: "We couldn't get a route right now. Try again later, or open directions in Google Maps.",
     noRoute: "No {mode} route found. Try another travel mode.",
     noTraffic: "Doesn't include live traffic, so it may take longer at peak times.",
+    region: "Region", language: "Language", settingsTitle: "Change region and language",
+    regionTwShort: "Taiwan", regionHkShort: "HK & Macau", langShort: "EN",
     routeTo: "Route to", closeRoute: "Close route", travelModeAria: "Travel mode", openGmapsNav: "Open in Google Maps",
     route: "Route", view: "View", gmaps: "Google Maps",
     all: "All", nearestSort: "Nearest",
@@ -1080,6 +1116,8 @@ const ICONS = {
   transit: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="14" rx="3"></rect><line x1="5" y1="11" x2="19" y2="11"></line><circle cx="8.5" cy="14" r="1"></circle><circle cx="15.5" cy="14" r="1"></circle><line x1="8" y1="17" x2="6" y2="21"></line><line x1="16" y1="17" x2="18" y2="21"></line></svg>`,
   walk: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="2"></circle><path d="M10 21l2-6 3 3v3"></path><path d="M8 11l3-3 3 2 3 1"></path><path d="M11 8l-1 7"></path></svg>`,
   route: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2.5"></circle><circle cx="18" cy="5" r="2.5"></circle><path d="M8.5 19H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.5"></path></svg>`,
+  chevronDown: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`,
+  check: `<svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
   hamburger: `<svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>`,
   listIcon: `<svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>`,
   trash: `<svg class="ui-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
@@ -2173,6 +2211,7 @@ function renderNote() {
 }
 
 function render(){
+  renderSettingsBtn();
   renderChips();
   updateFilterBadge();
   renderNote();
@@ -2336,6 +2375,57 @@ document.querySelectorAll(".tab").forEach(t =>
   t.onclick = () => setRegion(t.dataset.region));
 document.getElementById("q").addEventListener("input", render);
 
+/* ---------- 手機版：地區／語言選單 ---------- */
+function renderSettingsBtn() {
+  const btn = document.getElementById("settingsBtn");
+  if (!btn) return;
+  const regionLabel = region === "tw" ? t("regionTwShort") : t("regionHkShort");
+  btn.innerHTML = `${ICONS.globe}<span>${regionLabel}</span><span class="settings-sep">·</span><span>${t("langShort")}</span>${ICONS.chevronDown}`;
+  btn.title = t("settingsTitle");
+  btn.setAttribute("aria-label", `${t("settingsTitle")}: ${regionLabel}, ${IS_EN ? "English" : "中文"}`);
+}
+
+function renderSettingsMenu() {
+  const menu = document.getElementById("settingsMenu");
+  const opt = (active, onclick, label) =>
+    `<button role="menuitemradio" aria-checked="${active}" class="settings-opt${active ? " active" : ""}" onclick="${onclick}">
+      <span>${label}</span>${active ? ICONS.check : ""}</button>`;
+  menu.innerHTML = `
+    <div class="settings-group">
+      <div class="settings-label">${t("region")}</div>
+      ${opt(region === "tw", "chooseRegion('tw')", t("tabTw"))}
+      ${opt(region === "hk", "chooseRegion('hk')", t("tabHk"))}
+    </div>
+    <div class="settings-group">
+      <div class="settings-label">${t("language")}</div>
+      ${opt(!IS_EN, "setLang('zh')", "中文")}
+      ${opt(IS_EN, "setLang('en')", "English")}
+    </div>`;
+}
+
+function toggleSettingsMenu(force) {
+  const menu = document.getElementById("settingsMenu");
+  const btn = document.getElementById("settingsBtn");
+  const open = typeof force === "boolean" ? force : menu.hidden;
+  if (open) renderSettingsMenu();
+  menu.hidden = !open;
+  btn.setAttribute("aria-expanded", String(open));
+}
+
+function chooseRegion(r) {
+  toggleSettingsMenu(false);
+  if (r !== region) setRegion(r);
+}
+
+document.addEventListener("click", e => {
+  const menu = document.getElementById("settingsMenu");
+  if (!menu || menu.hidden) return;
+  if (!e.target.closest("#settingsMenu, #settingsBtn")) toggleSettingsMenu(false);
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") toggleSettingsMenu(false);
+});
+
 function syncToggleButtonForLayout() {
   const btn = document.getElementById("toggleAsideBtn");
   if (!btn) return;
@@ -2355,6 +2445,7 @@ window.addEventListener("resize", () => {
   if (nowMobile === lastIsMobile) return;
   lastIsMobile = nowMobile;
   document.querySelector(".wrap").classList.remove("aside-collapsed", "mobile-sheet-open");
+  toggleSettingsMenu(false);
   syncToggleButtonForLayout();
   map.invalidateSize();
 });
