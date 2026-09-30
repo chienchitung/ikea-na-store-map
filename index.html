@@ -1845,6 +1845,7 @@ const TW_LINE_ZH = [
   ["tamsuixinyi", "淡水信義線"], ["songshanxindian", "松山新店線"], ["zhonghexinlu", "中和新蘆線"],
   ["bannan", "板南線"], ["wenhu", "文湖線"], ["circularlightrail", "環狀輕軌"], ["circular", "環狀線"],
   ["airport", "桃園機場捷運"], ["danhai", "淡海輕軌"], ["ankeng", "安坑輕軌"],
+  ["xiaobitan", "小碧潭支線"], ["xinbeitou", "新北投支線"],
   ["red", "紅線"], ["orange", "橘線"], ["green", "綠線"], ["blue", "藍線"], ["brown", "棕線"], ["yellow", "環狀線"],
 ];
 const routeResultCache = {};   // "模式|起點|據點" -> route | null
@@ -1973,14 +1974,24 @@ function drawRoute(route, mode, s) {
 
 // 中文介面：Google 給英文路線名時，先查台灣捷運對照表；查不到的英文類別名（如台鐵 "Local Train"）改顯示中文車種。
 // 路線號碼（63）與原本就是中文的名稱保留不變。英文介面直接使用 Google 的名稱。
+// Google 的 name / nameShort 語言不固定（台北捷運：name「淡水信義線」、nameShort「Tamsui-Xinyi Line」），
+// 所以兩個都看：中文介面優先取含中文的，英文介面優先取英文的
 function lineName(line) {
   const vehicle = VEHICLE_LABEL[line.vehicle] || t("transitGeneric");
-  if (!line.name) return vehicle;
-  if (IS_EN || !/^[A-Za-z0-9\s.'()\/-]+$/.test(line.name)) return line.name;
-  const key = (line.full || line.name).toLowerCase().replace(/line|metro|mrt|[^a-z]/g, "");
-  const hit = key && TW_LINE_ZH.find(([k]) => key.includes(k));
-  if (hit) return hit[1];
-  return /[A-Za-z]/.test(line.name) ? vehicle : line.name;
+  const names = [line.name, line.full].filter(Boolean);
+  if (!names.length) return vehicle;
+  const hasCjk = n => /[㐀-鿿]/.test(n);
+  if (IS_EN) return names.find(n => !hasCjk(n)) || names[0];
+
+  const zh = names.find(hasCjk);
+  if (zh) return zh;
+  for (const n of names) {
+    const key = n.toLowerCase().replace(/line|metro|mrt|[^a-z]/g, "");
+    const hit = key && TW_LINE_ZH.find(([k]) => key.includes(k));
+    if (hit) return hit[1];
+  }
+  // 純數字路線號碼（巴士 63）保留；其餘英文類別名（Local Train）改顯示中文車種
+  return /[A-Za-z]/.test(names[0]) ? vehicle : names[0];
 }
 
 function routeStepsHtml(route) {
