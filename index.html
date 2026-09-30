@@ -371,11 +371,6 @@
     border-radius:10px;padding:1px 10px;margin-bottom:6px;
   }
   .pop .addr{font-size:12.5px;color:#333;line-height:1.6;}
-  .pop a{
-    display:inline-block;margin-top:8px;background:var(--ikea-blue);color:#fff;
-    font-size:12px;font-weight:700;padding:5px 14px;border-radius:16px;text-decoration:none;
-  }
-  .pop a:hover{background:#004a8a;}
 
   /* ---------- locate control ---------- */
   .leaflet-control-locate a{
@@ -752,8 +747,14 @@
   .rt-details .rt-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;}
   .rt-details b{color:var(--skapa-text);}
   .rt-nav{width:100%;margin-top:16px;}
-  .pop-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
-  .pop-actions .uloc-btn{text-decoration:none;}
+  /* 地圖資訊框按鈕：<button> 與 <a> 統一尺寸（等高、等寬），避免 Leaflet 預設連結樣式干擾 */
+  .pop-actions{display:flex;gap:8px;margin-top:12px;}
+  .pop-actions .uloc-btn{
+    flex:1 1 0;min-width:0;height:36px;min-height:36px;padding:0 12px;margin:0;
+    box-sizing:border-box;line-height:1;font-size:13px;text-decoration:none;
+  }
+  .pop-actions .uloc-btn--emph{color:#fff;}
+  .leaflet-container .pop-actions a.uloc-btn--secondary{color:var(--skapa-text);}
 
   /* ---------- 清單底部說明（依地區切換） ---------- */
   .note{font-size:12px;color:var(--skapa-text-2);line-height:1.6;}
