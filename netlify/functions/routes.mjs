@@ -102,8 +102,18 @@ async function handleMatrix(key, { origin, destinations, mode }) {
   return json(200, { results });
 }
 
-async function handleRoute(key, { origin, destination, mode, lang }) {
+async function handleRoute(key, { origin, destination, mode, lang, departureTime }) {
   if (!isPoint(destination)) return json(400, { error: "BAD_DESTINATION" });
+
+  // 大眾運輸可指定出發時間（例如深夜收班時改查白天班次）；只接受現在起 7 天內
+  let departure = null;
+  if (departureTime != null) {
+    const ms = Date.parse(departureTime);
+    if (mode !== "TRANSIT" || Number.isNaN(ms) || ms < Date.now() - 60000 || ms > Date.now() + 7 * 86400000) {
+      return json(400, { error: "BAD_DEPARTURE_TIME" });
+    }
+    departure = new Date(ms).toISOString();
+  }
 
   const request = {
     origin: toWaypoint(origin),
@@ -113,8 +123,9 @@ async function handleRoute(key, { origin, destination, mode, lang }) {
     computeAlternativeRoutes: false,
   };
   if (mode === "DRIVE") request.routingPreference = "TRAFFIC_UNAWARE";
+  if (departure) request.departureTime = departure;
 
-  const base = ["routes.duration", "routes.distanceMeters", "routes.polyline.encodedPolyline"];
+  const base =["routes.duration", "routes.distanceMeters", "routes.polyline.encodedPolyline"];
   // 只有大眾運輸需要分段資料（步行段／搭乘段、路線名稱與顏色、上下車站）
   const transitFields = [
     "routes.legs.steps.travelMode",

@@ -734,6 +734,13 @@
   .rt-dist{font-size:14px;color:var(--skapa-text-2);}
   .rt-msg{margin-top:16px;color:var(--skapa-text-2);}
   .rt-note{margin-top:4px;font-size:12px;color:var(--skapa-text-3);}
+  .route-panel .uloc-notice{margin-top:16px;}
+  .rt-daytime{width:100%;margin-top:8px;}
+  .rt-timenote{
+    display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:16px;padding:8px 12px;
+    background:var(--skapa-neutral);border-radius:4px;font-size:12px;color:var(--skapa-text);
+  }
+  .rt-timenote .uloc-link{margin-left:auto;}
   .rt-actions{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
   .rt-chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px;}
   .rt-chip{
@@ -1015,6 +1022,9 @@ const I18N = {
     routeErr: "暫時無法取得路線，請稍後再試，或直接用 Google 地圖導航。",
     noRoute: "查無{mode}路線，請改用其他交通方式。",
     noTraffic: "未計入即時路況，尖峰時段實際時間可能較長。",
+    noTransitNow: "目前時段可能沒有班次（已收班），以下為步行路線。",
+    daytimeBtn: "查看白天班次", daytimeNote: "以下為{day} 10:00 出發的班次。", backToNow: "改回現在出發",
+    today: "今天", tomorrow: "明天",
     region: "地區", language: "語言", settingsTitle: "切換地區與語言",
     regionTwShort: "台灣", regionHkShort: "香港・澳門", langShort: "中",
     routeTo: "路線前往", closeRoute: "關閉路線", travelModeAria: "交通方式", openGmapsNav: "用 Google 地圖導航",
@@ -1067,6 +1077,9 @@ const I18N = {
     routeErr: "We couldn't get a route right now. Try again later, or open directions in Google Maps.",
     noRoute: "No {mode} route found. Try another travel mode.",
     noTraffic: "Doesn't include live traffic, so it may take longer at peak times.",
+    noTransitNow: "There may be no service running right now, so a walking route is shown.",
+    daytimeBtn: "Show daytime service", daytimeNote: "Showing service departing {day} at 10:00.", backToNow: "Depart now instead",
+    today: "today", tomorrow: "tomorrow",
     region: "Region", language: "Language", settingsTitle: "Change region and language",
     regionTwShort: "Taiwan", regionHkShort: "HK & Macau", langShort: "EN",
     routeTo: "Route to", closeRoute: "Close route", travelModeAria: "Travel mode", openGmapsNav: "Open in Google Maps",
@@ -1121,6 +1134,7 @@ const ICONS = {
   transit: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="14" rx="3"></rect><line x1="5" y1="11" x2="19" y2="11"></line><circle cx="8.5" cy="14" r="1"></circle><circle cx="15.5" cy="14" r="1"></circle><line x1="8" y1="17" x2="6" y2="21"></line><line x1="16" y1="17" x2="18" y2="21"></line></svg>`,
   walk: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="2"></circle><path d="M10 21l2-6 3 3v3"></path><path d="M8 11l3-3 3 2 3 1"></path><path d="M11 8l-1 7"></path></svg>`,
   route: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2.5"></circle><circle cx="18" cy="5" r="2.5"></circle><path d="M8.5 19H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.5"></path></svg>`,
+  clock: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>`,
   chevronDown: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`,
   check: `<svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
   hamburger: `<svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>`,
@@ -1398,7 +1412,7 @@ function renderUserLocation(lat, lon, accuracy, method, city) {
   // 正在看路線時位置變了（自動定位／釘選／拖曳），用新起點重新規劃
   if (activeRoute) {
     const s = findStoreByKey(activeRoute.storeKey);
-    if (s) loadAndDrawRoute(s, activeRoute.storeKey, activeRoute.mode);
+    if (s) loadAndDrawRoute(s, activeRoute.storeKey, activeRoute.mode, activeRoute.daytime);
   }
 }
 
@@ -1888,25 +1902,35 @@ function directionsUrl(s, mode) {
   return `https://www.google.com/maps/dir/?api=1${origin}&destination=${s.lat},${s.lon}&travelmode=${GMAPS_MODE[mode] || "driving"}`;
 }
 
-function showRoute(storeKey, mode) {
+// 下一個當地（台港澳皆 UTC+8）早上 10:00，用於深夜收班時改查白天班次
+function nextDaytimeDeparture() {
+  const now = Date.now();
+  const local = new Date(now + 8 * 3600000);
+  let target = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), 2, 0, 0);
+  if (target <= now) target += 86400000;
+  const isToday = new Date(target + 8 * 3600000).getUTCDate() === local.getUTCDate();
+  return { iso: new Date(target).toISOString(), day: isToday ? t("today") : t("tomorrow") };
+}
+
+function showRoute(storeKey, mode, daytime = false) {
   const s = findStoreByKey(storeKey);
   if (!s) return;
   mode = ROUTE_MODES.includes(mode) ? mode : (ROUTE_MODES.includes(travelMode) ? travelMode : "DRIVE");
   closeMobileSheet();
   map.closePopup();
 
+  activeRoute = { storeKey, mode, daytime: daytime && mode === "TRANSIT" };
   if (!getUserLocationCoords()) {
-    activeRoute = { storeKey, mode };
     renderRoutePanel(s, mode, { needLocation: true });
     return;
   }
-  activeRoute = { storeKey, mode };
-  loadAndDrawRoute(s, storeKey, mode);
+  loadAndDrawRoute(s, storeKey, mode, activeRoute.daytime);
 }
 
-async function loadAndDrawRoute(s, storeKey, mode) {
+async function loadAndDrawRoute(s, storeKey, mode, daytime = false) {
   const loc = getUserLocationCoords();
-  const cacheKey = `${mode}|${originKey(loc)}|${storeKey}`;
+  const departure = daytime ? nextDaytimeDeparture() : null;
+  const cacheKey = `${mode}|${originKey(loc)}|${storeKey}${departure ? "|" + departure.iso : ""}`;
   const seq = ++routeRequestSeq;
 
   if (!(cacheKey in routeResultCache)) {
@@ -1917,7 +1941,7 @@ async function loadAndDrawRoute(s, storeKey, mode) {
       const res = await fetch(ROUTES_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "route", mode, lang: ROUTES_LANG, origin: { lat: loc.lat, lon: loc.lon }, destination: { lat: s.lat, lon: s.lon } }),
+        body: JSON.stringify({ type: "route", mode, lang: ROUTES_LANG, origin: { lat: loc.lat, lon: loc.lon }, destination: { lat: s.lat, lon: s.lon }, departureTime: departure ? departure.iso : undefined }),
       });
       if (res.ok) route = (await res.json()).route; else failed = true;
     } catch (e) { failed = true; }
@@ -1928,7 +1952,7 @@ async function loadAndDrawRoute(s, storeKey, mode) {
 
   const route = routeResultCache[cacheKey];
   if (!route) { clearRouteLayer(); renderRoutePanel(s, mode, { noRoute: true }); return; }
-  renderRoutePanel(s, mode, { route });
+  renderRoutePanel(s, mode, { route, departure });
   drawRoute(route, mode, s);
 }
 
@@ -2035,7 +2059,17 @@ function renderRoutePanel(s, mode, state) {
     body = `<div class="rt-msg">${t("noRoute", { mode: modeWord(TRAVEL_MODES[mode].label) })}</div>`;
   } else {
     const r = state.route;
-    body = `<div class="rt-summary"><span class="rt-time">${formatDuration(r.seconds)}</span><span class="rt-dist">${r.meters ? formatDistance(r.meters / 1000) : ""}</span></div>
+    // 大眾運輸結果完全沒有搭乘段 = 只能步行，通常是深夜收班；提供改查白天班次
+    const walkOnly = mode === "TRANSIT" && !(r.steps || []).some(st => st.line);
+    let transitNotice = "";
+    if (mode === "TRANSIT" && state.departure) {
+      transitNotice = `<div class="rt-timenote">${ICONS.clock}<span>${t("daytimeNote", { day: state.departure.day })}</span>
+        <button class="uloc-link" onclick="showRoute('${activeRoute.storeKey}','TRANSIT',false)">${t("backToNow")}</button></div>`;
+    } else if (walkOnly) {
+      transitNotice = `<div class="uloc-notice">${ICONS.warning}<span>${t("noTransitNow")}</span></div>
+        <button class="uloc-btn uloc-btn--secondary rt-daytime" onclick="showRoute('${activeRoute.storeKey}','TRANSIT',true)">${ICONS.clock} ${t("daytimeBtn")}</button>`;
+    }
+    body = `${transitNotice}<div class="rt-summary"><span class="rt-time">${formatDuration(r.seconds)}</span><span class="rt-dist">${r.meters ? formatDistance(r.meters / 1000) : ""}</span></div>
       ${mode === "TRANSIT" ? routeStepsHtml(r) : ""}
       ${mode === "DRIVE" ? `<div class="rt-note">${t("noTraffic")}</div>` : ""}`;
   }
