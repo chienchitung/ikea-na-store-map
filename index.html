@@ -567,6 +567,8 @@
   .chip .cat-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
   .chip.sort-nearest{border-color:var(--skapa-border);color:var(--skapa-text);}
   .chip.sort-nearest.active{background:var(--skapa-text);border-color:var(--skapa-text);color:#fff;box-shadow:none;}
+  .chip.chip-more{background:var(--skapa-neutral);border-color:var(--skapa-neutral);color:var(--skapa-text-2);gap:4px;}
+  .chip.chip-more:hover{border-color:var(--skapa-text);color:var(--skapa-text);}
 
   .list-summary-bar{font-size:14px;color:var(--skapa-text-2);font-weight:400;padding:8px 0 12px;gap:8px;flex-wrap:wrap;}
   .list-summary-bar b{color:var(--skapa-text);}
@@ -1029,7 +1031,7 @@ const I18N = {
     regionTwShort: "台灣", regionHkShort: "香港・澳門", langShort: "中",
     routeTo: "路線前往", closeRoute: "關閉路線", travelModeAria: "交通方式", openGmapsNav: "用 Google 地圖導航",
     route: "路線", view: "查看", gmaps: "Google 地圖",
-    all: "全部", nearestSort: "離我最近",
+    all: "全部", nearestSort: "離我最近", moreCats: "更多分類 +{n}", lessCats: "收合",
     nearestSortTitle: "點擊切換：依據與我的位置由近到遠排序",
     nearestSortNoLoc: "尚未設定我的位置，點擊即可在地圖上指定或自動偵測！",
     setLocFirst: "請先設定您的位置！\n您可點擊左下角「點圖定位」直接在地圖上指定，或點擊「自動定位」！",
@@ -1084,7 +1086,7 @@ const I18N = {
     regionTwShort: "Taiwan", regionHkShort: "HK & Macau", langShort: "EN",
     routeTo: "Route to", closeRoute: "Close route", travelModeAria: "Travel mode", openGmapsNav: "Open in Google Maps",
     route: "Route", view: "View", gmaps: "Google Maps",
-    all: "All", nearestSort: "Nearest",
+    all: "All", nearestSort: "Nearest", moreCats: "More +{n}", lessCats: "Less",
     nearestSortTitle: "Sort by distance from your location",
     nearestSortNoLoc: "Set your location to sort by distance",
     setLocFirst: "Set your location first.\nUse \"Set on map\" at the bottom left, or \"Locate me\".",
@@ -1135,6 +1137,7 @@ const ICONS = {
   walk: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="2"></circle><path d="M10 21l2-6 3 3v3"></path><path d="M8 11l3-3 3 2 3 1"></path><path d="M11 8l-1 7"></path></svg>`,
   route: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2.5"></circle><circle cx="18" cy="5" r="2.5"></circle><path d="M8.5 19H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.5"></path></svg>`,
   clock: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>`,
+  chevronUp: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>`,
   chevronDown: `<svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`,
   check: `<svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
   hamburger: `<svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>`,
@@ -2161,9 +2164,14 @@ function renderChips() {
   container.appendChild(allBtn);
 
   // 2. 各店型分類 Chips
+  // 桌面版預設收合成一列：只顯示目前選中的分類，其餘收進「更多分類」；手機版是單列左右滑動，全部顯示
+  const collapsible = !isMobileLayout();
+  const collapsed = collapsible && !chipsExpanded;
+  let hiddenCount = 0;
   d.cats.forEach(cat => {
     const count = d.stores.filter(s => s.cat === cat).length;
     if (count === 0) return;
+    if (collapsed && activeFilterCat !== cat) { hiddenCount++; return; }
     const btn = document.createElement("button");
     const isActive = (activeFilterCat === cat);
     btn.className = "chip" + (isActive ? " active" : "");
@@ -2191,7 +2199,21 @@ function renderChips() {
     render();
   };
   container.appendChild(distBtn);
+
+  // 4. 更多分類／收合
+  if (collapsible && (hiddenCount > 0 || chipsExpanded)) {
+    const moreBtn = document.createElement("button");
+    moreBtn.className = "chip chip-more";
+    moreBtn.setAttribute("aria-expanded", String(chipsExpanded));
+    moreBtn.innerHTML = chipsExpanded
+      ? `<span>${t("lessCats")}</span>${ICONS.chevronUp}`
+      : `<span>${t("moreCats", { n: hiddenCount })}</span>${ICONS.chevronDown}`;
+    moreBtn.onclick = () => { chipsExpanded = !chipsExpanded; renderChips(); };
+    container.appendChild(moreBtn);
+  }
 }
+
+let chipsExpanded = false;
 
 function renderNote() {
   const el = document.getElementById("regionNote");
@@ -2496,6 +2518,7 @@ window.addEventListener("resize", () => {
   lastIsMobile = nowMobile;
   document.querySelector(".wrap").classList.remove("aside-collapsed", "mobile-sheet-open");
   toggleSettingsMenu(false);
+  renderChips();
   syncToggleButtonForLayout();
   map.invalidateSize();
 });
